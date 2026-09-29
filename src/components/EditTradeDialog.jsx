@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrokerField, Field, Segmented, SIDE_OPTIONS, TERM_OPTIONS } from './Controls.jsx';
+import { calculatedPnl } from '../preview.js';
+import { signedMoney } from '../format.js';
 
 const asText = (value) => (value == null ? '' : String(value));
 
@@ -28,6 +30,18 @@ export function EditTradeDialog({ trade, today, brokers, onSave, onDelete, onClo
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // Realized P&L follows the calculation until you type your own final amount.
+  const edited = trade.pnlOverride != null;
+  const [pnlMode, setPnlMode] = useState(edited ? 'custom' : 'calculated');
+  const [pnlText, setPnlText] = useState(edited ? trade.pnlOverride.toFixed(2) : '');
+  const livePnl = calculatedPnl({
+    side: form.side,
+    quantity: Number(form.quantity),
+    entryPrice: Number(form.entryPrice),
+    exitPrice: Number(form.exitPrice),
+    margin: form.margin === '' ? 0 : Number(form.margin),
+  });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -63,6 +77,9 @@ export function EditTradeDialog({ trade, today, brokers, onSave, onDelete, onClo
     if (closed) {
       changes.exitPrice = form.exitPrice === '' ? null : Number(form.exitPrice);
       changes.exitDate = form.exitDate || null;
+      // Your own final amount, or null to use the calculated one.
+      changes.pnlOverride =
+        pnlMode === 'custom' && pnlText.trim() !== '' ? Number(pnlText) : null;
     }
     run(() => onSave(trade.id, changes));
   }
@@ -206,6 +223,33 @@ export function EditTradeDialog({ trade, today, brokers, onSave, onDelete, onClo
                   onChange={(e) => update('exitDate', e.target.value)}
                 />
               </Field>
+              <Field id="edit-pnl" label="Realized P&L">
+                <input
+                  id="edit-pnl"
+                  className="input"
+                  type="number"
+                  step="any"
+                  value={pnlMode === 'custom' ? pnlText : livePnl == null ? '' : livePnl.toFixed(2)}
+                  onChange={(e) => {
+                    setPnlMode('custom');
+                    setPnlText(e.target.value);
+                  }}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Field>
+              <p className="dialog__hint dialog__hint--pnl">
+                {pnlMode === 'custom' ? (
+                  <>
+                    Your final amount; it’s what counts in the totals. Calculated:{' '}
+                    {livePnl == null ? '—' : signedMoney(livePnl)}.{' '}
+                    <button type="button" className="link-btn" onClick={() => setPnlMode('calculated')}>
+                      Use calculated
+                    </button>
+                  </>
+                ) : (
+                  'Calculated from the prices, shares and margin. Type a different amount if your broker’s figure differs.'
+                )}
+              </p>
             </div>
             <div>
               <button

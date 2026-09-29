@@ -192,10 +192,16 @@ function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
   );
 }
 
-// Profit, return % and days held come from the backend.
+// Profit, return % and days held come from the backend. An amount you typed in
+// (pnlOverride) is marked "edited", with the calculated amount on hover.
 function ClosedRow({ trade, today, brokerNames, onEdit }) {
   const pnl = trade.realizedPnl;
   const held = heldFor(trade.daysHeld);
+  const edited = trade.pnlOverride != null;
+  const pnlTitle =
+    edited && trade.calculatedPnl != null
+      ? `You edited this amount. Calculated: ${signedMoney(trade.calculatedPnl)}`
+      : undefined;
   return (
     <tr className="trade">
       <StockCell trade={trade} />
@@ -213,9 +219,12 @@ function ClosedRow({ trade, today, brokerNames, onEdit }) {
           {trade.splitFrom ? ' · partial' : ''}
         </span>
       </td>
-      <td className="num">
+      <td className="num" title={pnlTitle}>
         <span className={`pnl tone-${tone(pnl)}`}>{signedMoney(pnl)}</span>
-        <span className="sub">{pct(trade.returnPct)}</span>
+        <span className="sub">
+          {pct(trade.returnPct)}
+          {edited ? ' · edited' : ''}
+        </span>
       </td>
       <EditButton trade={trade} onEdit={onEdit} />
     </tr>

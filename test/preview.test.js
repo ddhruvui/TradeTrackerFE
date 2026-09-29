@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { previewExit } from '../src/preview.js';
+import { calculatedPnl, previewExit } from '../src/preview.js';
 
 const position = { side: 'buy', quantity: 40, entryPrice: 118.25 };
 
@@ -20,6 +20,13 @@ test('margin deepens a loss: a $5 loss with $10 margin is −$15', () => {
 test('a short gains when it is bought back lower', () => {
   const short = { side: 'short', quantity: 20, entryPrice: 262.4 };
   assert.equal(previewExit(short, { quantity: 20, exitPrice: 250, margin: 0 }), 248);
+});
+
+test('a closed trade’s calculated amount matches the backend: price move minus margin', () => {
+  const fields = { side: 'buy', quantity: 10, entryPrice: 50, exitPrice: 60, margin: 2 };
+  assert.equal(calculatedPnl(fields), 98);
+  assert.equal(calculatedPnl({ ...fields, side: 'short' }), -102);
+  assert.equal(calculatedPnl({ ...fields, entryPrice: 0 }), null);
 });
 
 test('nothing to preview until the inputs make sense', () => {

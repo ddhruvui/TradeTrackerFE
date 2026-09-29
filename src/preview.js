@@ -13,3 +13,10 @@ export function previewExit(trade, { quantity, exitPrice, margin = 0 }) {
     Math.round(perShare * quantity * 100) - (closesPosition ? Math.round(margin * 100) : 0);
   return cents / 100;
 }
+
+// The calculated profit or loss of a closed trade from the Edit window's fields.
+// The whole position has exited, so margin comes off. Null until the fields make sense.
+export function calculatedPnl({ side, quantity, entryPrice, exitPrice, margin = 0 }) {
+  if (!(entryPrice > 0)) return null;
+  return previewExit({ side, quantity, entryPrice }, { quantity, exitPrice, margin });
+}

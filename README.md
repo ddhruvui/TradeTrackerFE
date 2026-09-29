@@ -33,6 +33,8 @@ The dashboard is a static site that calls the API on Vercel directly.
 
 The backend does all the profit math: `/api/summary` returns the four totals for the viewer's date and term, and `/api/trades` returns the trades sorted and filtered, with each closed trade's profit, return % and days held. The page reloads both after every change.
 
+Fractional shares and approximate prices can leave a calculated profit a little off, so a closed trade's Edit window has a **Realized P&L** field: it follows the calculation until you type your broker's final figure, which then counts everywhere. The table marks such rows "edited" and shows the calculated amount on hover.
+
 The one calculation here is the live "if sold" preview on open rows (`src/preview.js`). It mirrors the backend's exit rule (price move × shares, minus margin on the exit that closes the last shares), so change both together.
 
 ## Layout

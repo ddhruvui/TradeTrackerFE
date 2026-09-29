@@ -899,6 +899,29 @@ select {
   margin-top: 0;
 }
 
+.dialog__hint--pnl {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .dialog__foot {
   display: flex;
   flex-wrap: wrap;
