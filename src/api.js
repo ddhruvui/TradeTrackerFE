@@ -1,13 +1,22 @@
+// Where the API lives. Empty means this site itself: in development Vite forwards /api
+// to the backend. A deployed dashboard (for example on Render) sets VITE_API_URL at build time.
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '');
+
 async function request(path, { method = 'GET', body } = {}) {
   let res;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method,
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error('Can’t reach the page server. Check that npm run dev is still running here.');
+    // Browsers report a blocked cross-site call (CORS) as a network failure too.
+    throw new Error(
+      API_BASE
+        ? `Can’t reach the API at ${API_BASE}. Check that it’s up and that its CORS_ORIGINS setting includes ${window.location.origin}.`
+        : 'Can’t reach the page server. Check that npm run dev is still running here.',
+    );
   }
   if (res.status === 204) return null;
 

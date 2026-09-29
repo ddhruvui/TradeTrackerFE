@@ -1,0 +1,12 @@
+# Render Blueprint: in Render, choose New → Blueprint and pick this repo.
+# It creates the dashboard as a static site that calls the API on Vercel.
+services:
+  - type: web
+    name: trade-tracker-fe
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Built into the app. The API must list this site's address in CORS_ORIGINS.
+      - key: VITE_API_URL
+        value: https://tradetrackerbe.vercel.app

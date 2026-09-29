@@ -20,6 +20,15 @@ Start TradeTrackerBE first (`npm run dev` there). By default this app expects it
 | `npm run preview` | Serves the build on :4173, also sending `/api` to the backend |
 | `npm test` | Tests for the live exit preview |
 
+## Deploy on Render
+
+The dashboard is a static site that calls the API on Vercel directly.
+
+1. In Render, choose **New → Blueprint** and pick this repo; `render.yaml` sets everything up. Or choose **New → Static Site** with the build command `npm ci && npm run build`, the publish directory `dist`, and the environment variable `VITE_API_URL=https://tradetrackerbe.vercel.app`.
+2. When Render shows the site's address (like `https://trade-tracker-fe.onrender.com`), add it to `CORS_ORIGINS` in the Vercel project for TradeTrackerBE and redeploy the API. Until then the browser blocks the dashboard's calls and the page says so.
+
+`VITE_API_URL` is built into the app, so changing it needs a new Render deploy.
+
 ## Where the numbers come from
 
 The backend does all the profit math: `/api/summary` returns the four totals for the viewer's date and term, and `/api/trades` returns the trades sorted and filtered, with each closed trade's profit, return % and days held. The page reloads both after every change.
