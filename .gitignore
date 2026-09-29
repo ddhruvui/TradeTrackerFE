@@ -1,0 +1,9 @@
+# Local settings never go in git. Only the placeholder example does.
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+*.log
+.DS_Store
