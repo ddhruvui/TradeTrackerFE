@@ -52,7 +52,8 @@ export function SummaryCards({ summary, today, term, onEditInvestment }) {
               <span>No investment set{term === 'all' ? '' : ' for this term'}</span>
             )}
             <button type="button" className="link-btn" onClick={onEditInvestment}>
-              {summary.investment.all > 0 ? 'Edit' : 'Set amounts'}
+              {/* investment can be missing while an older API is still deployed */}
+              {summary.investment?.all > 0 ? 'Edit' : 'Set amounts'}
             </button>
           </span>
         )}
