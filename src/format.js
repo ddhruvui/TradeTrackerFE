@@ -19,6 +19,11 @@ export const price = (n) => priceFormat.format(n);
 export const qty = (n) => quantityFormat.format(n);
 export const pct = (n) => withMinus(percentFormat.format(n / 100));
 
+// A share of the investment with an arrow for its direction: ↑ 10%, ↓ 2.5%.
+const shareFormat = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 });
+export const pctArrow = (n) =>
+  `${n > 0 ? '↑ ' : n < 0 ? '↓ ' : ''}${shareFormat.format(Math.abs(n) / 100)}`;
+
 // Trade dates are calendar strings; format them in UTC so the day never shifts.
 const utc = (iso) => new Date(`${iso}T00:00:00Z`);
 const dateFormat = (options) => new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' });

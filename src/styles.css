@@ -119,7 +119,7 @@ select {
 /* Page */
 
 .page {
-  max-width: 1240px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 32px 24px 80px;
   display: grid;
@@ -250,6 +250,33 @@ select {
 
 .summary__scope {
   color: var(--muted);
+}
+
+.summary__invested {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-left: auto;
+  color: var(--ink-2);
+}
+
+.summary__invested strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.stat__pct {
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.share {
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .summary__grid {
@@ -548,7 +575,7 @@ select {
 
 .trades {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1260px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -871,6 +898,30 @@ select {
   width: 100%;
 }
 
+.dialog__grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dialog__intro {
+  max-width: 60ch;
+  color: var(--ink-2);
+}
+
+.investment-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.investment-total strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .dialog__section {
   display: grid;
   gap: 12px;
@@ -996,8 +1047,13 @@ select {
     width: 100%;
   }
 
-  .dialog__grid {
+  .dialog__grid,
+  .dialog__grid--three {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary__invested {
+    margin-left: 0;
   }
 }
 

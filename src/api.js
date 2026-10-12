@@ -36,8 +36,11 @@ export const api = {
   info: () => request('/info'),
   // The backend sorts, filters and works out each closed trade's profit.
   list: (term) => request(`/trades?${query({ term })}`),
-  // Realized totals for this week, month, year and overall, on the viewer's calendar.
+  // Realized totals for this week, month, year and overall, on the viewer's calendar,
+  // plus the investment behind the view and each total as a share of it.
   summary: (term, today) => request(`/summary?${query({ term, today })}`),
+  // The amount invested in each term: { short, mid, long } (All is their sum).
+  saveInvestment: (amounts) => request('/investment', { method: 'PATCH', body: amounts }),
   create: (trade) => request('/trades', { method: 'POST', body: trade }),
   update: (id, changes) => request(`/trades/${id}`, { method: 'PATCH', body: changes }),
   exit: (id, exit) => request(`/trades/${id}/exit`, { method: 'POST', body: exit }),

@@ -8,6 +8,7 @@ import { SummaryCards } from './components/SummaryCards.jsx';
 import { AddTradeForm } from './components/AddTradeForm.jsx';
 import { TradesTable } from './components/TradesTable.jsx';
 import { EditTradeDialog } from './components/EditTradeDialog.jsx';
+import { InvestmentDialog } from './components/InvestmentDialog.jsx';
 import { Toast } from './components/Toast.jsx';
 
 const FILTERS = [
@@ -26,6 +27,7 @@ export default function App() {
   const [status, setStatus] = useState('loading');
   const [loadError, setLoadError] = useState('');
   const [editing, setEditing] = useState(null);
+  const [editingInvestment, setEditingInvestment] = useState(false);
   const [toast, setToast] = useState(null);
   // From .env via the API: which database, and the broker list.
   const [info, setInfo] = useState({ testDb: false, brokers: [], defaultBroker: null });
@@ -112,6 +114,13 @@ export default function App() {
     notify(`Deleted the ${trade.symbol} transaction`);
   }
 
+  async function saveInvestment(amounts) {
+    await api.saveInvestment(amounts);
+    setEditingInvestment(false);
+    await load();
+    notify('Saved your investment amounts');
+  }
+
   return (
     <div className="page">
       <header className="masthead">
@@ -139,7 +148,12 @@ export default function App() {
         />
       </header>
 
-      <SummaryCards summary={summary} today={today} term={term} />
+      <SummaryCards
+        summary={summary}
+        today={today}
+        term={term}
+        onEditInvestment={() => setEditingInvestment(true)}
+      />
 
       <section className="panel" aria-label="Transactions">
         <AddTradeForm
@@ -162,6 +176,7 @@ export default function App() {
             rows={trades}
             today={today}
             term={term}
+            invested={summary?.invested}
             brokerNames={brokerNames}
             loading={status === 'loading'}
             onExit={exitTrade}
@@ -179,6 +194,13 @@ export default function App() {
           onSave={saveTrade}
           onDelete={deleteTrade}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {editingInvestment && summary && (
+        <InvestmentDialog
+          investment={summary.investment}
+          onSave={saveInvestment}
+          onClose={() => setEditingInvestment(false)}
         />
       )}
       <Toast toast={toast} onDone={clearToast} />

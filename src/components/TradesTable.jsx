@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
-import { heldFor, money, pct, price, qty, shortDate, signedMoney } from '../format.js';
+import { heldFor, money, pct, pctArrow, price, qty, shortDate, signedMoney } from '../format.js';
 
-const COLUMN_COUNT = 9;
+const COLUMN_COUNT = 10;
 const isOpen = (trade) => trade.exitPrice == null;
 const TERM_WORDS = { short: 'Short', mid: 'Mid', long: 'Long' };
 const TERM_STEPS = { short: 1, mid: 2, long: 3 };
@@ -187,14 +187,34 @@ function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
           </>
         )}
       </td>
+      <td className="num">
+        <span className="none">—</span>
+      </td>
       <EditButton trade={trade} onEdit={onEdit} />
     </tr>
   );
 }
 
+// Realized profit as a share of the investment behind the selected view, with an arrow.
+function ShareCell({ trade, shareTitle }) {
+  const share = trade.pctOfInvestment;
+  if (share == null) {
+    return (
+      <td className="num" title="Set your investment amounts to see this">
+        <span className="none">—</span>
+      </td>
+    );
+  }
+  return (
+    <td className="num" title={shareTitle}>
+      <span className={`share tone-${tone(share)}`}>{pctArrow(share)}</span>
+    </td>
+  );
+}
+
 // Profit, return % and days held come from the backend. An amount you typed in
 // (pnlOverride) is marked "edited", with the calculated amount on hover.
-function ClosedRow({ trade, today, brokerNames, onEdit }) {
+function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
   const pnl = trade.realizedPnl;
   const held = heldFor(trade.daysHeld);
   const edited = trade.pnlOverride != null;
@@ -222,10 +242,11 @@ function ClosedRow({ trade, today, brokerNames, onEdit }) {
       <td className="num" title={pnlTitle}>
         <span className={`pnl tone-${tone(pnl)}`}>{signedMoney(pnl)}</span>
         <span className="sub">
-          {pct(trade.returnPct)}
+          <span title="Return on this trade’s cost (shares × entry price)">{pct(trade.returnPct)}</span>
           {edited ? ' · edited' : ''}
         </span>
       </td>
+      <ShareCell trade={trade} shareTitle={shareTitle} />
       <EditButton trade={trade} onEdit={onEdit} />
     </tr>
   );
@@ -243,8 +264,21 @@ function GroupHead({ title, count, note }) {
   );
 }
 
-export function TradesTable({ rows, today, term, brokerNames, loading, onExit, onEdit }) {
+export function TradesTable({
+  rows,
+  today,
+  term,
+  invested,
+  brokerNames,
+  loading,
+  onExit,
+  onEdit,
+}) {
   if (loading) return <p className="table-status">Loading transactions…</p>;
+
+  const shareTitle = `Share of the ${
+    term === 'all' ? 'total' : TERM_LABELS[term].toLowerCase()
+  } investment (${money(invested ?? 0)})`;
 
   if (rows.length === 0) {
     return (
@@ -290,6 +324,9 @@ export function TradesTable({ rows, today, term, brokerNames, loading, onExit, o
             <th scope="col" className="num">
               Realized P&amp;L
             </th>
+            <th scope="col" className="num">
+              Of investment
+            </th>
             <th scope="col" className="actions">
               <span className="visually-hidden">Edit</span>
             </th>
@@ -323,6 +360,7 @@ export function TradesTable({ rows, today, term, brokerNames, loading, onExit, o
                 trade={trade}
                 today={today}
                 brokerNames={brokerNames}
+                shareTitle={shareTitle}
                 onEdit={onEdit}
               />
             ))}
