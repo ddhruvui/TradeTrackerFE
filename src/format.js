@@ -14,10 +14,19 @@ const percentFormat = new Intl.NumberFormat('en-US', {
 const withMinus = (text) => text.replace('-', '−');
 
 export const money = (n) => withMinus(moneyFormat.format(n));
+const wholeMoneyFormat = new Intl.NumberFormat('en-US', { ...USD, maximumFractionDigits: 0 });
+export const wholeMoney = (n) => withMinus(wholeMoneyFormat.format(n));
 export const signedMoney = (n) => withMinus(signedMoneyFormat.format(n));
 export const price = (n) => priceFormat.format(n);
 export const qty = (n) => quantityFormat.format(n);
 export const pct = (n) => withMinus(percentFormat.format(n / 100));
+const percent2Format = new Intl.NumberFormat('en-US', {
+  style: 'percent',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+// Two decimals and no plus sign: 0.09%, −0.12%.
+export const pct2 = (n) => withMinus(percent2Format.format(n / 100));
 
 // A share of the investment with an arrow for its direction: ↑ 10%, ↓ 2.5%.
 const shareFormat = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 });

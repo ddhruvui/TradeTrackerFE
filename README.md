@@ -37,6 +37,8 @@ The amount invested in each term is set with **Set amounts** / **Edit** next to 
 
 Fractional shares and approximate prices can leave a calculated profit a little off, so a closed trade's Edit window has a **Realized P&L** field: it follows the calculation until you type your broker's final figure, which then counts everywhere. The table marks such rows "edited" and shows the calculated amount on hover.
 
+For open trades, the table's **Margin charged** and **Final amount** columns are for reference and are worked out here (`src/marginCharge.js`); they don't change realized profit, and closed trades show — there. Margin charged is a margin you typed in, or else 6% a year charged per day: days × ROUNDUP(total × 6 / 36000, 0), with total = shares × entry price and days counted from the buy or short date (that day is day 1) to today. Final amount is per share: (total + that margin) ÷ shares for a buy, (total − that margin) ÷ shares for a short, followed by its change from the entry price in brackets, e.g. $541.3252 (0.09%).
+
 The one calculation here is the live "if sold" preview on open rows (`src/preview.js`). It mirrors the backend's exit rule (price move × shares, minus margin on the exit that closes the last shares), so change both together.
 
 ## Layout

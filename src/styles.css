@@ -119,7 +119,7 @@ select {
 /* Page */
 
 .page {
-  max-width: 1320px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: 32px 24px 80px;
   display: grid;
@@ -276,6 +276,13 @@ select {
 
 .share {
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.final-pct {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -575,7 +582,7 @@ select {
 
 .trades {
   width: 100%;
-  min-width: 1260px;
+  min-width: 1460px;
   border-collapse: separate;
   border-spacing: 0;
 }

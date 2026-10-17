@@ -1,9 +1,21 @@
 import { useState } from 'react';
 import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
-import { heldFor, money, pct, pctArrow, price, qty, shortDate, signedMoney } from '../format.js';
+import { finalChangePct, finalPerShare, marginCharge } from '../marginCharge.js';
+import {
+  heldFor,
+  money,
+  pct,
+  pct2,
+  pctArrow,
+  price,
+  qty,
+  shortDate,
+  signedMoney,
+  wholeMoney,
+} from '../format.js';
 
-const COLUMN_COUNT = 10;
+const COLUMN_COUNT = 12;
 const isOpen = (trade) => trade.exitPrice == null;
 const TERM_WORDS = { short: 'Short', mid: 'Mid', long: 'Long' };
 const TERM_STEPS = { short: 1, mid: 2, long: 3 };
@@ -40,6 +52,30 @@ function BrokerCell({ trade, brokerNames }) {
         {trade.broker}
       </abbr>
     </td>
+  );
+}
+
+// Margin charged and the final amount per share for an open trade, worked out in the
+// browser for reference; realized profit is unchanged. typedMargin follows the row's
+// margin box as you type. Closed rows show — in these columns.
+function MarginCells({ trade, today, typedMargin = trade.margin }) {
+  const charge = marginCharge({ ...trade, margin: typedMargin }, today);
+  const days = charge.days === 1 ? '1 day' : `${charge.days} days`;
+  const final = finalPerShare(trade, charge.amount);
+  return (
+    <>
+      <td className="num">
+        {money(charge.amount)}
+        <span className="sub">{charge.typed ? 'typed' : `${days} × ${wholeMoney(charge.perDay)}`}</span>
+      </td>
+      <td className="num">
+        {price(final)}{' '}
+        <span className="final-pct" title="Change from the entry price: (final − entry) × 100 / entry">
+          ({pct2(finalChangePct(trade, final))})
+        </span>
+        <span className="sub">per share</span>
+      </td>
+    </>
   );
 }
 
@@ -133,6 +169,7 @@ function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
           title="Charged when the last shares close"
         />
       </td>
+      <MarginCells trade={trade} today={today} typedMargin={exit.margin} />
       <td className="exit">
         <form id={formId} className="exit-form" onSubmit={submit} noValidate>
           <input
@@ -232,6 +269,12 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
       <td className="num">{qty(trade.quantity)}</td>
       <EntryCell trade={trade} today={today} />
       <td className="num">{trade.margin ? money(trade.margin) : <span className="none">—</span>}</td>
+      <td className="num">
+        <span className="none">—</span>
+      </td>
+      <td className="num">
+        <span className="none">—</span>
+      </td>
       <td className="exit">
         {price(trade.exitPrice)}
         <span className="sub">
@@ -319,6 +362,20 @@ export function TradesTable({
             </th>
             <th scope="col" className="num">
               Margin
+            </th>
+            <th
+              scope="col"
+              className="num"
+              title="Open trades: 6% a year, per day: days × roundup(total × 6 / 36000), counting the buy or short date as day 1. A margin you typed in is used instead."
+            >
+              Margin charged
+            </th>
+            <th
+              scope="col"
+              className="num"
+              title="Open trades, per share. Buy: (total + margin charged) ÷ shares. Short: (total − margin charged) ÷ shares. In brackets: the change from the entry price. For reference; realized profit isn't changed."
+            >
+              Final amount
             </th>
             <th scope="col">Exit</th>
             <th scope="col" className="num">
