@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
 import { finalChangePct, finalPerShare, marginCharge } from '../marginCharge.js';
+import { groupOpenTrades } from '../openGroups.js';
 import {
   heldFor,
   money,
@@ -15,7 +16,7 @@ import {
   wholeMoney,
 } from '../format.js';
 
-const COLUMN_COUNT = 12;
+const COLUMN_COUNT = 14;
 const isOpen = (trade) => trade.exitPrice == null;
 const TERM_WORDS = { short: 'Short', mid: 'Mid', long: 'Long' };
 const TERM_STEPS = { short: 1, mid: 2, long: 3 };
@@ -79,6 +80,33 @@ function MarginCells({ trade, today, typedMargin = trade.margin }) {
   );
 }
 
+// A ticker's share-weighted averages over its open lots (buys and shorts separately),
+// in cells spanning that ticker's rows.
+function GroupAverageCells({ group }) {
+  const rows = group.trades.length;
+  const shares = `${qty(group.shares)} ${group.shares === 1 ? 'share' : 'shares'}`;
+  return (
+    <>
+      <td
+        className="num group-avg"
+        rowSpan={rows}
+        title={`Average ${group.side === 'short' ? 'short' : 'buy'} price over ${shares} of ${group.symbol}`}
+      >
+        {price(group.avgValue)}
+        <span className="sub">{shares}</span>
+      </td>
+      <td
+        className="num group-avg"
+        rowSpan={rows}
+        title={`Average final amount over ${shares} of ${group.symbol}`}
+      >
+        {price(group.finalAvg)}
+        <span className="sub">per share</span>
+      </td>
+    </>
+  );
+}
+
 function EntryCell({ trade, today }) {
   return (
     <td className="num">
@@ -112,7 +140,8 @@ function EditButton({ trade, onEdit }) {
   );
 }
 
-function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
+// group: set on the first row of a ticker's lots, which carries the merged average cells.
+function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
   const [shares, setShares] = useState(String(trade.quantity));
   const [exitPrice, setExitPrice] = useState('');
   const [exitDate, setExitDate] = useState(today);
@@ -170,6 +199,7 @@ function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
         />
       </td>
       <MarginCells trade={trade} today={today} typedMargin={exit.margin} />
+      {group && <GroupAverageCells group={group} />}
       <td className="exit">
         <form id={formId} className="exit-form" onSubmit={submit} noValidate>
           <input
@@ -269,12 +299,12 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
       <td className="num">{qty(trade.quantity)}</td>
       <EntryCell trade={trade} today={today} />
       <td className="num">{trade.margin ? money(trade.margin) : <span className="none">—</span>}</td>
-      <td className="num">
-        <span className="none">—</span>
-      </td>
-      <td className="num">
-        <span className="none">—</span>
-      </td>
+      {/* Margin charged, Final amount, Avg value and Final avg amt are for open trades. */}
+      {[1, 2, 3, 4].map((column) => (
+        <td key={column} className="num">
+          <span className="none">—</span>
+        </td>
+      ))}
       <td className="exit">
         {price(trade.exitPrice)}
         <span className="sub">
@@ -340,12 +370,14 @@ export function TradesTable({
 
   const open = rows.filter(isOpen);
   const closed = rows.filter((trade) => !isOpen(trade));
+  // Open trades by ticker A→Z, grouped by ticker and side for the averages.
+  const openGroups = groupOpenTrades(open, today);
 
   return (
     <div className="table-wrap">
       <table className="trades">
         <caption className="visually-hidden">
-          Transactions, open positions first, then closed trades by exit date
+          Transactions, open positions first by ticker, then closed trades by exit date
         </caption>
         <thead>
           <tr>
@@ -377,6 +409,20 @@ export function TradesTable({
             >
               Final amount
             </th>
+            <th
+              scope="col"
+              className="num"
+              title="Open trades: average buy (or short) price of the ticker's open lots, weighted by shares. Buys and shorts are averaged separately."
+            >
+              Avg value
+            </th>
+            <th
+              scope="col"
+              className="num"
+              title="Open trades: average Final amount of the ticker's open lots, weighted by shares."
+            >
+              Final avg amt
+            </th>
             <th scope="col">Exit</th>
             <th scope="col" className="num">
               Realized P&amp;L
@@ -394,18 +440,21 @@ export function TradesTable({
             <GroupHead
               title="Open"
               count={open.length}
-              note="Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
+              note="By ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
             />
-            {open.map((trade) => (
-              <OpenRow
-                key={`${trade.id}:${trade.quantity}`}
-                trade={trade}
-                today={today}
-                brokerNames={brokerNames}
-                onExit={onExit}
-                onEdit={onEdit}
-              />
-            ))}
+            {openGroups.map((group) =>
+              group.trades.map((trade, index) => (
+                <OpenRow
+                  key={`${trade.id}:${trade.quantity}`}
+                  trade={trade}
+                  today={today}
+                  brokerNames={brokerNames}
+                  group={index === 0 ? group : null}
+                  onExit={onExit}
+                  onEdit={onEdit}
+                />
+              )),
+            )}
           </tbody>
         )}
         {closed.length > 0 && (

@@ -119,7 +119,7 @@ select {
 /* Page */
 
 .page {
-  max-width: 1500px;
+  max-width: 1720px;
   margin: 0 auto;
   padding: 32px 24px 80px;
   display: grid;
@@ -582,7 +582,7 @@ select {
 
 .trades {
   width: 100%;
-  min-width: 1460px;
+  min-width: 1660px;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -641,6 +641,13 @@ select {
 
 .trade:hover > * {
   background: var(--surface-2);
+}
+
+/* A ticker's averages span its open rows; the tint ties the cell to those rows. */
+.trades .group-avg {
+  background: var(--surface-2);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
 }
 
 .group-head th {
