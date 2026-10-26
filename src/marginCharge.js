@@ -1,8 +1,8 @@
 // Margin charged and the final amount, shown for open trades in the transactions table.
 // Worked out here in the browser only: realized profit stays as the backend calculates it.
 //
-// Margin interest is 6% a year over a 360-day year, charged per day and rounded up to
-// whole dollars: days × ROUNDUP(total × 6 / 36000, 0), where total = shares × entry price.
+// Margin interest is 6% a year over a 360-day year, rounded up to the cent:
+// ROUNDUP(shares × days × entry price × 6 / 36000, 2).
 
 const ANNUAL_RATE_PCT = 6;
 const DAY_MS = 86_400_000;
@@ -17,14 +17,14 @@ export function marginDays(entryDate, endDate) {
   return Math.max(1, Math.round((toUTC(endDate) - toUTC(entryDate)) / DAY_MS) + 1);
 }
 
-// { amount, days, perDay, typed }. A margin typed in for the trade wins; otherwise
+// { amount, days, typed }. A margin typed in for the trade wins; otherwise
 // interest runs from the entry date to the exit date (open trades: to today).
 export function marginCharge(trade, today) {
   if (trade.margin > 0) return { amount: trade.margin, typed: true };
   const days = marginDays(trade.entryDate, trade.exitDate ?? today);
-  // Integer cents keep exact cases exact: $36,000 is $6 a day, not $7.
-  const perDay = Math.ceil((totalCents(trade) * ANNUAL_RATE_PCT) / (36000 * 100));
-  return { amount: days * perDay, days, perDay, typed: false };
+  // Integer cents keep exact cases exact: $36,000 for a day is $6.00, not $6.01.
+  const cents = Math.ceil((totalCents(trade) * days * ANNUAL_RATE_PCT) / 36000);
+  return { amount: cents / 100, days, typed: false };
 }
 
 // The final amount per share: a buy cost you (total + margin) ÷ shares, a short

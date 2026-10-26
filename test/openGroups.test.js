@@ -44,8 +44,8 @@ test('averages are weighted by shares: 10 @ $100 and 30 @ $120 average $115', ()
 });
 
 test('a short’s final average takes the margin off, using the calculated margin when none is typed', () => {
-  // $650 total → roundup($0.11) = $1 a day × 3 days (Oct 17–19) = $3: ($650 − $3) ÷ 5.
+  // roundup(5 × 3 days (Oct 17–19) × $130 × 6 / 36000, 2) = roundup($0.325) = $0.33: ($650 − $0.33) ÷ 5.
   const [short] = groupOpenTrades([lot('AAPL', 'short', 5, 130, '2026-10-17')], today);
   near(short.avgValue, 130);
-  near(short.finalAvg, 129.4);
+  near(short.finalAvg, 129.934);
 });

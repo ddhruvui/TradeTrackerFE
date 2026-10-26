@@ -13,7 +13,6 @@ import {
   qty,
   shortDate,
   signedMoney,
-  wholeMoney,
 } from '../format.js';
 
 const COLUMN_COUNT = 14;
@@ -67,7 +66,7 @@ function MarginCells({ trade, today, typedMargin = trade.margin }) {
     <>
       <td className="num">
         {money(charge.amount)}
-        <span className="sub">{charge.typed ? 'typed' : `${days} × ${wholeMoney(charge.perDay)}`}</span>
+        <span className="sub">{charge.typed ? 'typed' : `${days} at 6%`}</span>
       </td>
       <td className="num">
         {price(final)}{' '}
@@ -398,7 +397,7 @@ export function TradesTable({
             <th
               scope="col"
               className="num"
-              title="Open trades: 6% a year, per day: days × roundup(total × 6 / 36000), counting the buy or short date as day 1. A margin you typed in is used instead."
+              title="Open trades: 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1. A margin you typed in is used instead."
             >
               Margin charged
             </th>

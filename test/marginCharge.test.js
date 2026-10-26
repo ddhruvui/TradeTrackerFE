@@ -27,14 +27,15 @@ test('days count both ends: bought today is 1, yesterday is 2', () => {
   assert.equal(marginDays('2026-09-30', today), 18);
 });
 
-test('days × roundup(total × 6 / 36000): $54,082.52 for 5 days is $50', () => {
+test('roundup(shares × days × price × 6 / 36000, 2): $54,082.52 for 5 days is $45.07', () => {
   assert.equal(tradeTotal(position()), 54082.52);
-  assert.deepEqual(marginCharge(position(), today), { amount: 50, days: 5, perDay: 10, typed: false });
+  // 100 × 5 × 540.8252 × 6 / 36000 = 45.0687…, rounded up to the cent.
+  assert.deepEqual(marginCharge(position(), today), { amount: 45.07, days: 5, typed: false });
 });
 
-test('an exact daily amount is not rounded up again', () => {
+test('an exact amount is not rounded up again', () => {
   const exact = position({ quantity: 1, entryPrice: 36000, entryDate: today });
-  assert.equal(marginCharge(exact, today).perDay, 6);
+  assert.equal(marginCharge(exact, today).amount, 6);
 });
 
 test('a closed trade is charged until its exit date, not today', () => {
