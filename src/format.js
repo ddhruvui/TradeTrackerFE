@@ -18,6 +18,9 @@ const wholeMoneyFormat = new Intl.NumberFormat('en-US', { ...USD, maximumFractio
 export const wholeMoney = (n) => withMinus(wholeMoneyFormat.format(n));
 export const signedMoney = (n) => withMinus(signedMoneyFormat.format(n));
 export const price = (n) => priceFormat.format(n);
+// Rounded up to the cent, always two decimals: 541.3252 → $541.33. toFixed trims float
+// noise first so an exact amount (80.8 × 100 = 8080.000…01) isn't pushed up a cent.
+export const centsUp = (n) => money(Math.ceil(Number((n * 100).toFixed(6))) / 100);
 export const qty = (n) => quantityFormat.format(n);
 export const pct = (n) => withMinus(percentFormat.format(n / 100));
 const percent2Format = new Intl.NumberFormat('en-US', {

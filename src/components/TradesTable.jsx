@@ -4,6 +4,7 @@ import { previewExit } from '../preview.js';
 import { finalChangePct, finalPerShare, marginCharge } from '../marginCharge.js';
 import { groupOpenTrades } from '../openGroups.js';
 import {
+  centsUp,
   heldFor,
   money,
   pct,
@@ -65,11 +66,11 @@ function MarginCells({ trade, today, typedMargin = trade.margin }) {
   return (
     <>
       <td className="num">
-        {money(charge.amount)}
+        {centsUp(charge.amount)}
         <span className="sub">{charge.typed ? 'typed' : `${days} at 6%`}</span>
       </td>
       <td className="num">
-        {price(final)}{' '}
+        {centsUp(final)}{' '}
         <span className="final-pct" title="Change from the entry price: (final − entry) × 100 / entry">
           ({pct2(finalChangePct(trade, final))})
         </span>
@@ -91,7 +92,7 @@ function GroupAverageCells({ group }) {
         rowSpan={rows}
         title={`Average ${group.side === 'short' ? 'short' : 'buy'} price over ${shares} of ${group.symbol}`}
       >
-        {price(group.avgValue)}
+        {centsUp(group.avgValue)}
         <span className="sub">{shares}</span>
       </td>
       <td
@@ -99,7 +100,7 @@ function GroupAverageCells({ group }) {
         rowSpan={rows}
         title={`Average final amount over ${shares} of ${group.symbol}`}
       >
-        {price(group.finalAvg)}
+        {centsUp(group.finalAvg)}
         <span className="sub">per share</span>
       </td>
     </>
