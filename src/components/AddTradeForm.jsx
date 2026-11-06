@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrokerField, Field, Segmented, SIDE_OPTIONS, TERM_OPTIONS } from './Controls.jsx';
+import { SymbolInput } from './SymbolInput.jsx';
 
 const blankForm = (today, broker) => ({
   symbol: '',
@@ -21,7 +22,7 @@ function problemWith(trade) {
   return '';
 }
 
-export function AddTradeForm({ today, brokers, defaultBroker, onAdd }) {
+export function AddTradeForm({ today, brokers, defaultBroker, tradedSymbols, onAdd }) {
   const [form, setForm] = useState(() => blankForm(today, defaultBroker));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -79,16 +80,12 @@ export function AddTradeForm({ today, brokers, defaultBroker, onAdd }) {
       </div>
       <div className="entry__fields">
         <Field id="new-symbol" label="Stock">
-          <input
+          <SymbolInput
             id="new-symbol"
             ref={symbolRef}
-            className="input input--symbol"
             value={form.symbol}
-            onChange={(e) => update('symbol', e.target.value)}
-            placeholder="AAPL"
-            maxLength={15}
-            autoComplete="off"
-            spellCheck={false}
+            onChange={(value) => update('symbol', value)}
+            traded={tradedSymbols}
           />
         </Field>
         <BrokerField

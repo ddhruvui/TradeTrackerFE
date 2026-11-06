@@ -43,6 +43,23 @@ export default function App() {
     document.title = info.testDb ? 'Trade Tracker (test database)' : 'Trade Tracker';
   }, [info.testDb]);
 
+  // Every symbol traded before, whatever the term filter, for the symbol suggestions.
+  const [tradedSymbols, setTradedSymbols] = useState([]);
+  const rememberSymbols = useCallback((list) => {
+    setTradedSymbols((current) => {
+      const next = new Set(current);
+      list.forEach((trade) => next.add(trade.symbol));
+      return next.size === current.length ? current : [...next].sort();
+    });
+  }, []);
+
+  useEffect(() => {
+    api
+      .list('all')
+      .then(rememberSymbols)
+      .catch(() => {}); // Suggestions fall back to the watchlist.
+  }, [rememberSymbols]);
+
   const brokerNames = useMemo(
     () => Object.fromEntries(info.brokers.map(({ code, name }) => [code, name])),
     [info.brokers],
@@ -57,6 +74,7 @@ export default function App() {
       const [list, totals] = await Promise.all([api.list(term), api.summary(term, today)]);
       if (thisLoad !== latestLoad.current) return; // a newer filter or date is loading
       setTrades(list);
+      rememberSymbols(list);
       setSummary(totals);
       setStatus('ready');
     } catch (err) {
@@ -64,7 +82,7 @@ export default function App() {
       setLoadError(err.message);
       setStatus('error');
     }
-  }, [term, today]);
+  }, [term, today, rememberSymbols]);
 
   useEffect(() => {
     load();
@@ -160,6 +178,7 @@ export default function App() {
           today={today}
           brokers={info.brokers}
           defaultBroker={info.defaultBroker}
+          tradedSymbols={tradedSymbols}
           onAdd={addTrade}
         />
         {status === 'error' ? (
