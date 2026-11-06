@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { groupOpenTrades } from '../src/openGroups.js';
+import { groupOpenTrades, targetPrices } from '../src/openGroups.js';
 
 const today = '2026-10-19';
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} ≉ ${expected}`);
@@ -48,4 +48,26 @@ test('a short’s final average takes the margin off, using the calculated margi
   const [short] = groupOpenTrades([lot('AAPL', 'short', 5, 130, '2026-10-17')], today);
   near(short.avgValue, 130);
   near(short.finalAvg, 129.934);
+});
+
+test('buy targets are 2%, 5% and 6% above the final avg amt, rounded up', () => {
+  // Final avg amt $543.0833 shows as $543.09; 1.02 × 543.09 = 553.9518 → 553.96.
+  assert.deepEqual(targetPrices('buy', 543.0833), [
+    { pct: 2, price: 553.96 },
+    { pct: 5, price: 570.25 }, // 570.2445
+    { pct: 6, price: 575.68 }, // 575.6754
+  ]);
+});
+
+test('short targets are 2%, 5% and 6% below the final avg amt, rounded down', () => {
+  assert.deepEqual(targetPrices('short', 543.09), [
+    { pct: 2, price: 532.22 }, // 532.2282
+    { pct: 5, price: 515.93 }, // 515.9355
+    { pct: 6, price: 510.5 }, // 510.5046
+  ]);
+});
+
+test('an exact target is not pushed a cent either way', () => {
+  assert.deepEqual(targetPrices('buy', 100).map((t) => t.price), [102, 105, 106]);
+  assert.deepEqual(targetPrices('short', 100).map((t) => t.price), [98, 95, 94]);
 });

@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
-import { finalChangePct, finalPerShare, marginCharge } from '../marginCharge.js';
-import { groupOpenTrades } from '../openGroups.js';
+import { marginCharge } from '../marginCharge.js';
+import { groupOpenTrades, targetPrices } from '../openGroups.js';
 import {
   centsUp,
   heldFor,
   money,
   pct,
-  pct2,
   pctArrow,
   price,
   qty,
@@ -16,7 +15,7 @@ import {
   signedMoney,
 } from '../format.js';
 
-const COLUMN_COUNT = 14;
+const COLUMN_COUNT = 13;
 const isOpen = (trade) => trade.exitPrice == null;
 const TERM_WORDS = { short: 'Short', mid: 'Mid', long: 'Long' };
 const TERM_STEPS = { short: 1, mid: 2, long: 3 };
@@ -56,29 +55,6 @@ function BrokerCell({ trade, brokerNames }) {
   );
 }
 
-// Margin charged and the final amount per share for an open trade, worked out in the
-// browser for reference; realized profit is unchanged. typedMargin follows the row's
-// margin box as you type. Closed rows show — in these columns.
-function MarginCells({ trade, today, typedMargin = trade.margin }) {
-  const charge = marginCharge({ ...trade, margin: typedMargin }, today);
-  const days = charge.days === 1 ? '1 day' : `${charge.days} days`;
-  const final = finalPerShare(trade, charge.amount);
-  return (
-    <>
-      <td className="num">
-        {centsUp(charge.amount)}
-        <span className="sub">{charge.typed ? 'typed' : `${days} at 6%`}</span>
-      </td>
-      <td className="num">
-        {centsUp(final)}{' '}
-        <span className="final-pct" title="Change from the entry price: (final − entry) × 100 / entry">
-          ({pct2(finalChangePct(trade, final))})
-        </span>
-        <span className="sub">per share</span>
-      </td>
-    </>
-  );
-}
 
 // A ticker's share-weighted averages over its open lots (buys and shorts separately),
 // in cells spanning that ticker's rows.
@@ -102,6 +78,20 @@ function GroupAverageCells({ group }) {
       >
         {centsUp(group.finalAvg)}
         <span className="sub">per share</span>
+      </td>
+      <td
+        className="num group-avg"
+        rowSpan={rows}
+        title={`Exit targets ${group.side === 'short' ? 'below' : 'above'} the Final avg amt of ${centsUp(group.finalAvg)}`}
+      >
+        <dl className="targets">
+          {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => (
+            <div key={pct} className="targets__row">
+              <dt>{pct}%</dt>
+              <dd>{money(target)}</dd>
+            </div>
+          ))}
+        </dl>
       </td>
     </>
   );
@@ -145,13 +135,17 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
   const [shares, setShares] = useState(String(trade.quantity));
   const [exitPrice, setExitPrice] = useState('');
   const [exitDate, setExitDate] = useState(today);
-  const [margin, setMargin] = useState(String(trade.margin ?? 0));
+  // Until you type in the margin box (null), it follows the margin charged up to the
+  // exit date, or the trade's own margin if one was typed in when it was added.
+  const [typedMargin, setTypedMargin] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const formId = `exit-${trade.id}`;
   const isShort = trade.side === 'short';
   const priceLabel = isShort ? 'Buy price' : 'Sell price';
+  const autoMargin = marginCharge({ ...trade, exitDate: exitDate || today }, today).amount.toFixed(2);
+  const margin = typedMargin ?? autoMargin;
   const exit = {
     quantity: shares === '' ? trade.quantity : Number(shares),
     exitPrice: Number(exitPrice),
@@ -192,13 +186,12 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
           min="0"
           step="any"
           value={margin}
-          onChange={(e) => setMargin(e.target.value)}
+          onChange={(e) => setTypedMargin(e.target.value)}
           onFocus={(e) => e.target.select()}
           aria-label={`${trade.symbol} margin, charged when the last shares close`}
-          title="Charged when the last shares close"
+          title="Margin charged up to the exit date; type to change it. Charged when the last shares close."
         />
       </td>
-      <MarginCells trade={trade} today={today} typedMargin={exit.margin} />
       {group && <GroupAverageCells group={group} />}
       <td className="exit">
         <form id={formId} className="exit-form" onSubmit={submit} noValidate>
@@ -299,8 +292,8 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
       <td className="num">{qty(trade.quantity)}</td>
       <EntryCell trade={trade} today={today} />
       <td className="num">{trade.margin ? money(trade.margin) : <span className="none">—</span>}</td>
-      {/* Margin charged, Final amount, Avg value and Final avg amt are for open trades. */}
-      {[1, 2, 3, 4].map((column) => (
+      {/* Avg value, Final avg amt and Target are for open trades. */}
+      {[1, 2, 3].map((column) => (
         <td key={column} className="num">
           <span className="none">—</span>
         </td>
@@ -392,22 +385,12 @@ export function TradesTable({
             <th scope="col" className="num">
               Entry
             </th>
-            <th scope="col" className="num">
+            <th
+              scope="col"
+              className="num"
+              title="Open trades: filled in at 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1 and the exit date as the last. Type to use your own amount."
+            >
               Margin
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades: 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1. A margin you typed in is used instead."
-            >
-              Margin charged
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades, per share. Buy: (total + margin charged) ÷ shares. Short: (total − margin charged) ÷ shares. In brackets: the change from the entry price. For reference; realized profit isn't changed."
-            >
-              Final amount
             </th>
             <th
               scope="col"
@@ -419,9 +402,16 @@ export function TradesTable({
             <th
               scope="col"
               className="num"
-              title="Open trades: average Final amount of the ticker's open lots, weighted by shares."
+              title="Open trades, per share over the ticker's open lots. Buy: (total + margin) ÷ shares. Short: (total − margin) ÷ shares, with margin to today. For reference; realized profit isn't changed."
             >
               Final avg amt
+            </th>
+            <th
+              scope="col"
+              className="num"
+              title="Open trades: exit targets from the Final avg amt. Buy: 1.02, 1.05 and 1.06 × Final avg amt, rounded up. Short: 0.98, 0.95 and 0.94 ×, rounded down."
+            >
+              Target
             </th>
             <th scope="col">Exit</th>
             <th scope="col" className="num">
