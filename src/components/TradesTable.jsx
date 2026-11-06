@@ -15,7 +15,6 @@ import {
   signedMoney,
 } from '../format.js';
 
-const COLUMN_COUNT = 13;
 const isOpen = (trade) => trade.exitPrice == null;
 const TERM_WORDS = { short: 'Short', mid: 'Mid', long: 'Long' };
 const TERM_STEPS = { short: 1, mid: 2, long: 3 };
@@ -247,9 +246,6 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
           </>
         )}
       </td>
-      <td className="num">
-        <span className="none">—</span>
-      </td>
       <EditButton trade={trade} onEdit={onEdit} />
     </tr>
   );
@@ -292,12 +288,6 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
       <td className="num">{qty(trade.quantity)}</td>
       <EntryCell trade={trade} today={today} />
       <td className="num">{trade.margin ? money(trade.margin) : <span className="none">—</span>}</td>
-      {/* Avg value, Final avg amt and Target are for open trades. */}
-      {[1, 2, 3].map((column) => (
-        <td key={column} className="num">
-          <span className="none">—</span>
-        </td>
-      ))}
       <td className="exit">
         {price(trade.exitPrice)}
         <span className="sub">
@@ -318,15 +308,153 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
   );
 }
 
-function GroupHead({ title, count, note }) {
+// A section title above each table: OPEN 3  By ticker…
+function SectionHead({ id, title, count, note }) {
   return (
-    <tr className="group-head">
-      <th colSpan={COLUMN_COUNT} scope="rowgroup">
-        <span className="group-head__title">{title}</span>
-        <span className="group-head__count">{count}</span>
-        <span className="group-head__note">{note}</span>
+    <div className="group-head">
+      <h3 id={id} className="group-head__title">
+        {title}
+      </h3>
+      <span className="group-head__count">{count}</span>
+      <span className="group-head__note">{note}</span>
+    </div>
+  );
+}
+
+// Column headers shared by both tables.
+function LeadingHeaders() {
+  return (
+    <>
+      <th scope="col" className="stock">
+        Stock
       </th>
-    </tr>
+      <th scope="col">Broker</th>
+      <th scope="col">Term</th>
+      <th scope="col" className="num">
+        Qty
+      </th>
+      <th scope="col" className="num">
+        Entry
+      </th>
+    </>
+  );
+}
+
+function EditHeader() {
+  return (
+    <th scope="col" className="actions">
+      <span className="visually-hidden">Edit</span>
+    </th>
+  );
+}
+
+function OpenTable({ groups, count, today, brokerNames, onExit, onEdit }) {
+  return (
+    <section className="trade-section" aria-labelledby="open-trades-title">
+      <SectionHead
+        id="open-trades-title"
+        title="Open"
+        count={count}
+        note="By ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
+      />
+      <div className="table-wrap">
+        <table className="trades">
+          <thead>
+            <tr>
+              <LeadingHeaders />
+              <th
+                scope="col"
+                className="num"
+                title="Filled in at 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1 and the exit date as the last. Type to use your own amount."
+              >
+                Margin
+              </th>
+              <th
+                scope="col"
+                className="num"
+                title="Average buy (or short) price of the ticker's open lots, weighted by shares. Buys and shorts are averaged separately."
+              >
+                Avg value
+              </th>
+              <th
+                scope="col"
+                className="num"
+                title="Per share over the ticker's open lots. Buy: (total + margin) ÷ shares. Short: (total − margin) ÷ shares, with margin to today. For reference; realized profit isn't changed."
+              >
+                Final avg amt
+              </th>
+              <th
+                scope="col"
+                className="num"
+                title="Exit targets from the Final avg amt. Buy: 1.02, 1.05 and 1.06 × Final avg amt, rounded up. Short: 0.98, 0.95 and 0.94 ×, rounded down."
+              >
+                Target
+              </th>
+              <th scope="col">Exit</th>
+              <th scope="col" className="num" title="What the exit you're typing would realize">
+                If exited
+              </th>
+              <EditHeader />
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group) =>
+              group.trades.map((trade, index) => (
+                <OpenRow
+                  key={`${trade.id}:${trade.quantity}`}
+                  trade={trade}
+                  today={today}
+                  brokerNames={brokerNames}
+                  group={index === 0 ? group : null}
+                  onExit={onExit}
+                  onEdit={onEdit}
+                />
+              )),
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ClosedTable({ trades, today, brokerNames, shareTitle, onEdit }) {
+  return (
+    <section className="trade-section" aria-labelledby="closed-trades-title">
+      <SectionHead id="closed-trades-title" title="Closed" count={trades.length} note="Newest exit first." />
+      <div className="table-wrap">
+        <table className="trades">
+          <thead>
+            <tr>
+              <LeadingHeaders />
+              <th scope="col" className="num">
+                Margin
+              </th>
+              <th scope="col">Exit</th>
+              <th scope="col" className="num">
+                Realized P&amp;L
+              </th>
+              <th scope="col" className="num">
+                Of investment
+              </th>
+              <EditHeader />
+            </tr>
+          </thead>
+          <tbody>
+            {trades.map((trade) => (
+              <ClosedRow
+                key={trade.id}
+                trade={trade}
+                today={today}
+                brokerNames={brokerNames}
+                shareTitle={shareTitle}
+                onEdit={onEdit}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -363,106 +491,29 @@ export function TradesTable({
 
   const open = rows.filter(isOpen);
   const closed = rows.filter((trade) => !isOpen(trade));
-  // Open trades by ticker A→Z, grouped by ticker and side for the averages.
-  const openGroups = groupOpenTrades(open, today);
 
   return (
-    <div className="table-wrap">
-      <table className="trades">
-        <caption className="visually-hidden">
-          Transactions, open positions first by ticker, then closed trades by exit date
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col" className="stock">
-              Stock
-            </th>
-            <th scope="col">Broker</th>
-            <th scope="col">Term</th>
-            <th scope="col" className="num">
-              Qty
-            </th>
-            <th scope="col" className="num">
-              Entry
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades: filled in at 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1 and the exit date as the last. Type to use your own amount."
-            >
-              Margin
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades: average buy (or short) price of the ticker's open lots, weighted by shares. Buys and shorts are averaged separately."
-            >
-              Avg value
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades, per share over the ticker's open lots. Buy: (total + margin) ÷ shares. Short: (total − margin) ÷ shares, with margin to today. For reference; realized profit isn't changed."
-            >
-              Final avg amt
-            </th>
-            <th
-              scope="col"
-              className="num"
-              title="Open trades: exit targets from the Final avg amt. Buy: 1.02, 1.05 and 1.06 × Final avg amt, rounded up. Short: 0.98, 0.95 and 0.94 ×, rounded down."
-            >
-              Target
-            </th>
-            <th scope="col">Exit</th>
-            <th scope="col" className="num">
-              Realized P&amp;L
-            </th>
-            <th scope="col" className="num">
-              Of investment
-            </th>
-            <th scope="col" className="actions">
-              <span className="visually-hidden">Edit</span>
-            </th>
-          </tr>
-        </thead>
-        {open.length > 0 && (
-          <tbody>
-            <GroupHead
-              title="Open"
-              count={open.length}
-              note="By ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
-            />
-            {openGroups.map((group) =>
-              group.trades.map((trade, index) => (
-                <OpenRow
-                  key={`${trade.id}:${trade.quantity}`}
-                  trade={trade}
-                  today={today}
-                  brokerNames={brokerNames}
-                  group={index === 0 ? group : null}
-                  onExit={onExit}
-                  onEdit={onEdit}
-                />
-              )),
-            )}
-          </tbody>
-        )}
-        {closed.length > 0 && (
-          <tbody>
-            <GroupHead title="Closed" count={closed.length} note="Newest exit first." />
-            {closed.map((trade) => (
-              <ClosedRow
-                key={trade.id}
-                trade={trade}
-                today={today}
-                brokerNames={brokerNames}
-                shareTitle={shareTitle}
-                onEdit={onEdit}
-              />
-            ))}
-          </tbody>
-        )}
-      </table>
-    </div>
+    <>
+      {open.length > 0 && (
+        <OpenTable
+          // Open trades by ticker A→Z, grouped by ticker and side for the averages.
+          groups={groupOpenTrades(open, today)}
+          count={open.length}
+          today={today}
+          brokerNames={brokerNames}
+          onExit={onExit}
+          onEdit={onEdit}
+        />
+      )}
+      {closed.length > 0 && (
+        <ClosedTable
+          trades={closed}
+          today={today}
+          brokerNames={brokerNames}
+          shareTitle={shareTitle}
+          onEdit={onEdit}
+        />
+      )}
+    </>
   );
 }

@@ -730,13 +730,21 @@ select {
   border-right: 1px solid var(--line);
 }
 
-.group-head th {
-  padding-top: 18px;
-  padding-bottom: 8px;
+/* Open and Closed each get a titled table; a rule separates them. */
+.trade-section + .trade-section {
+  border-top: 1px solid var(--line);
+}
+
+.group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 18px 16px 10px;
   color: var(--ink-2);
 }
 
 .group-head__title {
+  margin: 0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
