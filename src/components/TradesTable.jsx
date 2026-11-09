@@ -3,6 +3,7 @@ import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
 import { marginCharge } from '../marginCharge.js';
 import { groupOpenTrades, targetPrices } from '../openGroups.js';
+import { nextSort, sortOpenGroups, sortTrades } from '../sortTrades.js';
 import {
   centsUp,
   heldFor,
@@ -321,21 +322,41 @@ function SectionHead({ id, title, count, note }) {
   );
 }
 
+// A column header that sorts its table when clicked; the arrow shows the direction.
+function SortHeader({ sortKey, sort, onSort, className, title, children }) {
+  const active = sort.key === sortKey;
+  const ariaSort = active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined;
+  return (
+    <th scope="col" className={className} aria-sort={ariaSort} title={title}>
+      <button
+        type="button"
+        className={`sort-btn${active ? ' sort-btn--active' : ''}`}
+        onClick={() => onSort(nextSort(sort, sortKey))}
+      >
+        {children}
+        <span className="sort-btn__arrow" aria-hidden="true">
+          {active ? (sort.dir === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 // Column headers shared by both tables.
-function LeadingHeaders() {
+function LeadingHeaders({ sort, onSort }) {
   return (
     <>
-      <th scope="col" className="stock">
+      <SortHeader sortKey="stock" sort={sort} onSort={onSort} className="stock">
         Stock
-      </th>
+      </SortHeader>
       <th scope="col">Broker</th>
       <th scope="col">Term</th>
       <th scope="col" className="num">
         Qty
       </th>
-      <th scope="col" className="num">
+      <SortHeader sortKey="entry" sort={sort} onSort={onSort} className="num" title="Sort by entry date">
         Entry
-      </th>
+      </SortHeader>
     </>
   );
 }
@@ -348,20 +369,22 @@ function EditHeader() {
   );
 }
 
-function OpenTable({ groups, count, today, brokerNames, onExit, onEdit }) {
+function OpenTable({ groups: byTicker, count, today, brokerNames, onExit, onEdit }) {
+  const [sort, setSort] = useState({ key: 'stock', dir: 'asc' });
+  const groups = sortOpenGroups(byTicker, sort);
   return (
     <section className="trade-section" aria-labelledby="open-trades-title">
       <SectionHead
         id="open-trades-title"
         title="Open"
         count={count}
-        note="By ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
+        note="Grouped by ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
       />
       <div className="table-wrap">
         <table className="trades">
           <thead>
             <tr>
-              <LeadingHeaders />
+              <LeadingHeaders sort={sort} onSort={setSort} />
               <th
                 scope="col"
                 className="num"
@@ -418,19 +441,23 @@ function OpenTable({ groups, count, today, brokerNames, onExit, onEdit }) {
   );
 }
 
-function ClosedTable({ trades, today, brokerNames, shareTitle, onEdit }) {
+function ClosedTable({ trades: newestExitFirst, today, brokerNames, shareTitle, onEdit }) {
+  const [sort, setSort] = useState({ key: 'exit', dir: 'desc' });
+  const trades = sortTrades(newestExitFirst, sort);
   return (
     <section className="trade-section" aria-labelledby="closed-trades-title">
-      <SectionHead id="closed-trades-title" title="Closed" count={trades.length} note="Newest exit first." />
+      <SectionHead id="closed-trades-title" title="Closed" count={trades.length} note="Sort by Stock, Entry or Exit." />
       <div className="table-wrap">
         <table className="trades">
           <thead>
             <tr>
-              <LeadingHeaders />
+              <LeadingHeaders sort={sort} onSort={setSort} />
               <th scope="col" className="num">
                 Margin
               </th>
-              <th scope="col">Exit</th>
+              <SortHeader sortKey="exit" sort={sort} onSort={setSort} title="Sort by exit date">
+                Exit
+              </SortHeader>
               <th scope="col" className="num">
                 Realized P&amp;L
               </th>
