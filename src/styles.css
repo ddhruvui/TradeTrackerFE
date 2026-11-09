@@ -700,67 +700,129 @@ select {
   background: var(--surface-2);
 }
 
-/* Target prices: percent on the left, price on the right, one per line. */
-.targets {
-  display: grid;
-  gap: 2px;
-  margin: 0;
+/* Exit targets as an evenly spaced ladder: 2% → 5% → 6%, a dot per target on one line,
+   the dots getting stronger towards the last target. */
+.trades .target-cell {
+  text-align: center;
 }
 
-.targets__row {
+.ladder {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(3, 72px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The line runs from the first dot's centre to the last one's. */
+.ladder::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  left: 36px;
+  right: 36px;
+  height: 2px;
+  background: var(--line-strong);
+}
+
+.ladder__rung {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ladder__pct {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.ladder__dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  margin: 3px 0;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.ladder__rung:first-child .ladder__dot {
+  border-color: var(--line-strong);
+}
+
+.ladder__rung:last-child .ladder__dot {
+  background: var(--muted);
+}
+
+.ladder__price {
+  font-size: 13px;
+  line-height: 18px;
   white-space: nowrap;
 }
 
-.targets dt {
-  color: var(--muted);
-  font-size: 12px;
+.trade:hover .ladder__dot {
+  background: var(--surface-2);
 }
 
-.targets dd {
-  margin: 0;
+.trade:hover .ladder__rung:last-child .ladder__dot {
+  background: var(--muted);
 }
 
 /* A position with several lots: the summary row opens a lots panel under it. */
-.lots-toggle {
+.row-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink-2);
+  margin: -4px -6px -4px -8px;
+  padding: 4px 6px 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
   font: inherit;
-  font-size: 13px;
   cursor: pointer;
 }
 
-.lots-toggle:hover {
+.row-toggle:hover {
   background: var(--surface-3);
-  color: var(--ink);
 }
 
-.lots-toggle:focus-visible {
+.row-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.lots-toggle svg {
+.row-toggle svg {
+  color: var(--muted);
   transition: transform 0.15s;
 }
 
-.lots-toggle[aria-expanded='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+.row-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
 }
 
-.lots-toggle[aria-expanded='true'] svg {
-  transform: rotate(180deg);
+/* Open lots in the position, in the same pill as the section counts. */
+.lot-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 18px;
+  margin-left: 2px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Line the badge up under the ticker, past the arrow. */
+.trade--position .stock .badge {
+  margin-left: 16px;
 }
 
 .trade--position.is-expanded > * {

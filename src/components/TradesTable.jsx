@@ -69,20 +69,22 @@ function FinalAvgCell({ group }) {
   );
 }
 
+// The 2%, 5% and 6% targets as an evenly spaced ladder: percent above, price below.
 function TargetCell({ group }) {
   return (
     <td
-      className="num"
+      className="target-cell"
       title={`Exit targets ${group.side === 'short' ? 'below' : 'above'} the Final avg amt of ${centsUp(group.finalAvg)}`}
     >
-      <dl className="targets">
+      <ol className="ladder">
         {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => (
-          <div key={pct} className="targets__row">
-            <dt>{pct}%</dt>
-            <dd>{money(target)}</dd>
-          </div>
+          <li key={pct} className="ladder__rung">
+            <span className="ladder__pct">{pct}%</span>
+            <span className="ladder__dot" aria-hidden="true" />
+            <span className="ladder__price">{money(target)}</span>
+          </li>
         ))}
-      </dl>
+      </ol>
     </td>
   );
 }
@@ -246,7 +248,7 @@ function sameOrMixed(trades, pick) {
   return values.length === 1 ? { value: values[0] } : { values };
 }
 
-const OPEN_COLUMNS = 11;
+const OPEN_COLUMNS = 8;
 
 // A position: one summary row (total shares, average entry, total
 // margin, final avg and targets) and, when expanded, a lots panel under it where each
@@ -261,7 +263,26 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
   return (
     <>
       <tr className={`trade trade--open trade--position${expanded ? ' is-expanded' : ''}`}>
-        <StockCell trade={first} />
+        <th scope="row" className="stock">
+          <button
+            type="button"
+            className="row-toggle"
+            aria-expanded={expanded}
+            aria-controls={expanded ? panelId : undefined}
+            onClick={onToggle}
+            title={expanded ? 'Hide the lots' : 'Show the lots to exit or edit them'}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M3.5 2 6.5 5 3.5 8" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+            <span className="ticker">{group.symbol}</span>
+            <span className="lot-count" title={`${group.trades.length} open ${group.trades.length === 1 ? 'lot' : 'lots'}`}>
+              {group.trades.length}
+              <span className="visually-hidden"> {group.trades.length === 1 ? 'lot' : 'lots'}</span>
+            </span>
+          </button>
+          <span className={`badge badge--${group.side}`}>{group.side === 'short' ? 'Short' : 'Buy'}</span>
+        </th>
         {broker.value ? (
           <BrokerCell trade={first} brokerNames={brokerNames} />
         ) : (
@@ -280,7 +301,9 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
             </span>
           )}
         </td>
-        <td className="num">{qty(group.shares)}</td>
+        <td className="num">
+          {qty(group.shares)}
+        </td>
         <td
           className="num"
           title={`Average ${group.side === 'short' ? 'short' : 'buy'} price over ${shares} of ${group.symbol}, weighted by shares`}
@@ -294,25 +317,6 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
         </td>
         <FinalAvgCell group={group} />
         <TargetCell group={group} />
-        <td className="exit">
-          <button
-            type="button"
-            className="lots-toggle"
-            aria-expanded={expanded}
-            aria-controls={expanded ? panelId : undefined}
-            onClick={onToggle}
-            title={expanded ? 'Hide the lots' : 'Show the lots to exit or edit them'}
-          >
-            {group.trades.length} {group.trades.length === 1 ? 'lot' : 'lots'}
-            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-              <path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </button>
-        </td>
-        <td className="num">
-          <span className="pill-open">Open</span>
-        </td>
-        <td className="actions" />
       </tr>
       {expanded && (
         <tr className="lots-row" id={panelId}>
@@ -535,16 +539,11 @@ function OpenTable({ groups: byTicker, count, today, brokerNames, onExit, onEdit
               </th>
               <th
                 scope="col"
-                className="num"
+                className="target-cell"
                 title="Exit targets from the Final avg amt. Buy: 1.02, 1.05 and 1.06 × Final avg amt, rounded up. Short: 0.98, 0.95 and 0.94 ×, rounded down."
               >
                 Target
               </th>
-              <th scope="col">Exit</th>
-              <th scope="col" className="num" title="What the exit you're typing would realize">
-                If exited
-              </th>
-              <EditHeader />
             </tr>
           </thead>
           <tbody>
