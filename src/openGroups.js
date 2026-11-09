@@ -16,22 +16,30 @@ export function sortOpenByTicker(trades) {
 }
 
 // Share-weighted averages over a group's lots: the entry price (avgValue) and the final
-// amount per share after margin charged (finalAvg), worked out in whole cents.
+// amount per share after margin charged (finalAvg), plus the lots' margin added up,
+// worked out in whole cents.
 function averages(trades, today) {
   let shares = 0;
   let totalCents = 0;
   let finalCents = 0;
+  let marginCents = 0;
   for (const trade of trades) {
     const cents = Math.round(trade.quantity * trade.entryPrice * 100);
     const charged = Math.round(marginCharge(trade, today).amount * 100);
     shares += trade.quantity;
     totalCents += cents;
+    marginCents += charged;
     finalCents += trade.side === 'short' ? cents - charged : cents + charged;
   }
-  return { shares, avgValue: totalCents / 100 / shares, finalAvg: finalCents / 100 / shares };
+  return {
+    shares,
+    avgValue: totalCents / 100 / shares,
+    finalAvg: finalCents / 100 / shares,
+    margin: marginCents / 100,
+  };
 }
 
-// [{ symbol, side, trades, shares, avgValue, finalAvg }], in display order.
+// [{ symbol, side, trades, shares, avgValue, finalAvg, margin }], in display order.
 export function groupOpenTrades(trades, today) {
   const groups = [];
   for (const trade of sortOpenByTicker(trades)) {

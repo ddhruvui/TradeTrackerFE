@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useStoredChoice, useStoredSet } from '../hooks.js';
 import { TERM_LABELS } from '../labels.js';
 import { previewExit } from '../preview.js';
 import { marginCharge } from '../marginCharge.js';
@@ -56,44 +57,33 @@ function BrokerCell({ trade, brokerNames }) {
 }
 
 
-// A ticker's share-weighted averages over its open lots (buys and shorts separately),
-// in cells spanning that ticker's rows.
-function GroupAverageCells({ group }) {
-  const rows = group.trades.length;
+// A position's final amount and exit targets, worked out over its open lots
+// (buys and shorts of one ticker separately).
+function FinalAvgCell({ group }) {
   const shares = `${qty(group.shares)} ${group.shares === 1 ? 'share' : 'shares'}`;
   return (
-    <>
-      <td
-        className="num group-avg"
-        rowSpan={rows}
-        title={`Average ${group.side === 'short' ? 'short' : 'buy'} price over ${shares} of ${group.symbol}`}
-      >
-        {centsUp(group.avgValue)}
-        <span className="sub">{shares}</span>
-      </td>
-      <td
-        className="num group-avg"
-        rowSpan={rows}
-        title={`Average final amount over ${shares} of ${group.symbol}`}
-      >
-        {centsUp(group.finalAvg)}
-        <span className="sub">per share</span>
-      </td>
-      <td
-        className="num group-avg"
-        rowSpan={rows}
-        title={`Exit targets ${group.side === 'short' ? 'below' : 'above'} the Final avg amt of ${centsUp(group.finalAvg)}`}
-      >
-        <dl className="targets">
-          {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => (
-            <div key={pct} className="targets__row">
-              <dt>{pct}%</dt>
-              <dd>{money(target)}</dd>
-            </div>
-          ))}
-        </dl>
-      </td>
-    </>
+    <td className="num" title={`Average final amount over ${shares} of ${group.symbol}`}>
+      {centsUp(group.finalAvg)}
+      <span className="sub">per share</span>
+    </td>
+  );
+}
+
+function TargetCell({ group }) {
+  return (
+    <td
+      className="num"
+      title={`Exit targets ${group.side === 'short' ? 'below' : 'above'} the Final avg amt of ${centsUp(group.finalAvg)}`}
+    >
+      <dl className="targets">
+        {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => (
+          <div key={pct} className="targets__row">
+            <dt>{pct}%</dt>
+            <dd>{money(target)}</dd>
+          </div>
+        ))}
+      </dl>
+    </td>
   );
 }
 
@@ -130,8 +120,8 @@ function EditButton({ trade, onEdit }) {
   );
 }
 
-// group: set on the first row of a ticker's lots, which carries the merged average cells.
-function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
+// One lot inside a position's lots panel, with its own margin, exit form and edit button.
+function OpenRow({ trade, today, brokerNames, onExit, onEdit }) {
   const [shares, setShares] = useState(String(trade.quantity));
   const [exitPrice, setExitPrice] = useState('');
   const [exitDate, setExitDate] = useState(today);
@@ -170,7 +160,6 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
 
   return (
     <tr className="trade trade--open">
-      <StockCell trade={trade} />
       <BrokerCell trade={trade} brokerNames={brokerNames} />
       <td>
         <TermTag term={trade.term} />
@@ -192,7 +181,6 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
           title="Margin charged up to the exit date; type to change it. Charged when the last shares close."
         />
       </td>
-      {group && <GroupAverageCells group={group} />}
       <td className="exit">
         <form id={formId} className="exit-form" onSubmit={submit} noValidate>
           <input
@@ -249,6 +237,126 @@ function OpenRow({ trade, today, brokerNames, group, onExit, onEdit }) {
       </td>
       <EditButton trade={trade} onEdit={onEdit} />
     </tr>
+  );
+}
+
+// One value when every lot shares it, otherwise all of them.
+function sameOrMixed(trades, pick) {
+  const values = [...new Set(trades.map(pick))];
+  return values.length === 1 ? { value: values[0] } : { values };
+}
+
+const OPEN_COLUMNS = 11;
+
+// A position: one summary row (total shares, average entry, total
+// margin, final avg and targets) and, when expanded, a lots panel under it where each
+// lot keeps its own margin, exit form and edit button.
+function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, onEdit }) {
+  const [first] = group.trades;
+  const panelId = `lots-${group.symbol}-${group.side}`;
+  const broker = sameOrMixed(group.trades, (trade) => trade.broker);
+  const term = sameOrMixed(group.trades, (trade) => trade.term);
+  const oldest = group.trades.reduce((min, trade) => (trade.entryDate < min ? trade.entryDate : min), first.entryDate);
+  const shares = `${qty(group.shares)} ${group.shares === 1 ? 'share' : 'shares'}`;
+  return (
+    <>
+      <tr className={`trade trade--open trade--position${expanded ? ' is-expanded' : ''}`}>
+        <StockCell trade={first} />
+        {broker.value ? (
+          <BrokerCell trade={first} brokerNames={brokerNames} />
+        ) : (
+          <td>
+            <abbr className="broker" title={broker.values.map((code) => brokerNames[code] ?? code).join(', ')}>
+              {broker.values.length} brokers
+            </abbr>
+          </td>
+        )}
+        <td>
+          {term.value ? (
+            <TermTag term={term.value} />
+          ) : (
+            <span className="term" title={term.values.map((t) => TERM_LABELS[t]).join(', ')}>
+              Mixed
+            </span>
+          )}
+        </td>
+        <td className="num">{qty(group.shares)}</td>
+        <td
+          className="num"
+          title={`Average ${group.side === 'short' ? 'short' : 'buy'} price over ${shares} of ${group.symbol}, weighted by shares`}
+        >
+          {centsUp(group.avgValue)}
+          <span className="sub">avg · since {shortDate(oldest, today)}</span>
+        </td>
+        <td className="num" title="The lots' margin added up. Change it on each lot.">
+          {money(group.margin)}
+          <span className="sub">total</span>
+        </td>
+        <FinalAvgCell group={group} />
+        <TargetCell group={group} />
+        <td className="exit">
+          <button
+            type="button"
+            className="lots-toggle"
+            aria-expanded={expanded}
+            aria-controls={expanded ? panelId : undefined}
+            onClick={onToggle}
+            title={expanded ? 'Hide the lots' : 'Show the lots to exit or edit them'}
+          >
+            {group.trades.length} {group.trades.length === 1 ? 'lot' : 'lots'}
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+              <path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+          </button>
+        </td>
+        <td className="num">
+          <span className="pill-open">Open</span>
+        </td>
+        <td className="actions" />
+      </tr>
+      {expanded && (
+        <tr className="lots-row" id={panelId}>
+          <td colSpan={OPEN_COLUMNS}>
+            <div className="lots-panel">
+              <table className="trades trades--lots" aria-label={`${group.symbol} ${group.side} lots`}>
+                <thead>
+                  <tr>
+                    <th scope="col">Broker</th>
+                    <th scope="col">Term</th>
+                    <th scope="col" className="num">
+                      Qty
+                    </th>
+                    <th scope="col" className="num">
+                      Entry
+                    </th>
+                    <th scope="col" className="num">
+                      Margin
+                    </th>
+                    <th scope="col">Exit</th>
+                    <th scope="col" className="num">
+                      If exited
+                    </th>
+                    <EditHeader />
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.trades.map((trade) => (
+                    <OpenRow
+                      key={`${trade.id}:${trade.quantity}`}
+                      trade={trade}
+                      today={today}
+                      brokerNames={brokerNames}
+                      onExit={onExit}
+                      onEdit={onEdit}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -310,13 +418,36 @@ function ClosedRow({ trade, today, brokerNames, shareTitle, onEdit }) {
 }
 
 // A section title above each table: OPEN 3  By ticker…
-function SectionHead({ id, title, count, note }) {
+// With onToggle, the title and count become a button that shows or hides the table.
+function SectionHead({ id, title, count, note, expanded, controls, onToggle }) {
+  if (!onToggle) {
+    return (
+      <div className="group-head">
+        <h3 id={id} className="group-head__title">
+          {title}
+        </h3>
+        <span className="group-head__count">{count}</span>
+        <span className="group-head__note">{note}</span>
+      </div>
+    );
+  }
   return (
     <div className="group-head">
       <h3 id={id} className="group-head__title">
-        {title}
+        <button
+          type="button"
+          className="group-head__toggle"
+          aria-expanded={expanded}
+          aria-controls={expanded ? controls : undefined}
+          onClick={onToggle}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M3.5 2 6.5 5 3.5 8" fill="none" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+          {title}
+          <span className="group-head__count">{count}</span>
+        </button>
       </h3>
-      <span className="group-head__count">{count}</span>
       <span className="group-head__note">{note}</span>
     </div>
   );
@@ -372,13 +503,16 @@ function EditHeader() {
 function OpenTable({ groups: byTicker, count, today, brokerNames, onExit, onEdit }) {
   const [sort, setSort] = useState({ key: 'stock', dir: 'asc' });
   const groups = sortOpenGroups(byTicker, sort);
+  // Positions start collapsed; the ones you open are remembered.
+  const [expanded, toggle] = useStoredSet('tradeTracker.openPositions');
+  const groupKey = (group) => `${group.symbol}:${group.side}`;
   return (
     <section className="trade-section" aria-labelledby="open-trades-title">
       <SectionHead
         id="open-trades-title"
         title="Open"
-        count={count}
-        note="Grouped by ticker. Not realized until you exit. Lower the shares to exit part of a position; margin is charged when the last shares close."
+        count={groups.length}
+        note={`Grouped by ticker, ${count} ${count === 1 ? 'lot' : 'lots'}. Open a position's lots to exit or edit them. Not realized until you exit; margin is charged when a lot's last shares close.`}
       />
       <div className="table-wrap">
         <table className="trades">
@@ -391,13 +525,6 @@ function OpenTable({ groups: byTicker, count, today, brokerNames, onExit, onEdit
                 title="Filled in at 6% a year: roundup(shares × days × entry price × 6 / 36000, 2), counting the buy or short date as day 1 and the exit date as the last. Type to use your own amount."
               >
                 Margin
-              </th>
-              <th
-                scope="col"
-                className="num"
-                title="Average buy (or short) price of the ticker's open lots, weighted by shares. Buys and shorts are averaged separately."
-              >
-                Avg value
               </th>
               <th
                 scope="col"
@@ -421,60 +548,15 @@ function OpenTable({ groups: byTicker, count, today, brokerNames, onExit, onEdit
             </tr>
           </thead>
           <tbody>
-            {groups.map((group) =>
-              group.trades.map((trade, index) => (
-                <OpenRow
-                  key={`${trade.id}:${trade.quantity}`}
-                  trade={trade}
-                  today={today}
-                  brokerNames={brokerNames}
-                  group={index === 0 ? group : null}
-                  onExit={onExit}
-                  onEdit={onEdit}
-                />
-              )),
-            )}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function ClosedTable({ trades: newestExitFirst, today, brokerNames, shareTitle, onEdit }) {
-  const [sort, setSort] = useState({ key: 'exit', dir: 'desc' });
-  const trades = sortTrades(newestExitFirst, sort);
-  return (
-    <section className="trade-section" aria-labelledby="closed-trades-title">
-      <SectionHead id="closed-trades-title" title="Closed" count={trades.length} note="Sort by Stock, Entry or Exit." />
-      <div className="table-wrap">
-        <table className="trades">
-          <thead>
-            <tr>
-              <LeadingHeaders sort={sort} onSort={setSort} />
-              <th scope="col" className="num">
-                Margin
-              </th>
-              <SortHeader sortKey="exit" sort={sort} onSort={setSort} title="Sort by exit date">
-                Exit
-              </SortHeader>
-              <th scope="col" className="num">
-                Realized P&amp;L
-              </th>
-              <th scope="col" className="num">
-                Of investment
-              </th>
-              <EditHeader />
-            </tr>
-          </thead>
-          <tbody>
-            {trades.map((trade) => (
-              <ClosedRow
-                key={trade.id}
-                trade={trade}
+            {groups.map((group) => (
+              <PositionRows
+                key={groupKey(group)}
+                group={group}
                 today={today}
                 brokerNames={brokerNames}
-                shareTitle={shareTitle}
+                expanded={expanded.has(groupKey(group))}
+                onToggle={() => toggle(groupKey(group))}
+                onExit={onExit}
                 onEdit={onEdit}
               />
             ))}
@@ -485,21 +567,66 @@ function ClosedTable({ trades: newestExitFirst, today, brokerNames, shareTitle, 
   );
 }
 
-export function TradesTable({
-  rows,
-  today,
-  term,
-  invested,
-  brokerNames,
-  loading,
-  onExit,
-  onEdit,
-}) {
-  if (loading) return <p className="table-status">Loading transactions…</p>;
+function ClosedTable({ trades: newestExitFirst, today, brokerNames, shareTitle, onEdit }) {
+  const [sort, setSort] = useState({ key: 'exit', dir: 'desc' });
+  const trades = sortTrades(newestExitFirst, sort);
+  // Hidden until you show it; the choice is remembered.
+  const [shown, setShown] = useStoredChoice('tradeTracker.closedShown', ['hidden', 'shown']);
+  const expanded = shown === 'shown';
+  return (
+    <section className="panel trade-section" aria-labelledby="closed-trades-title">
+      <SectionHead
+        id="closed-trades-title"
+        title="Closed"
+        count={trades.length}
+        note={expanded ? 'Sort by Stock, Entry or Exit.' : 'Show to see your closed trades.'}
+        expanded={expanded}
+        controls="closed-trades-table"
+        onToggle={() => setShown(expanded ? 'hidden' : 'shown')}
+      />
+      {expanded && (
+        <div className="table-wrap" id="closed-trades-table">
+          <table className="trades">
+            <thead>
+              <tr>
+                <LeadingHeaders sort={sort} onSort={setSort} />
+                <th scope="col" className="num">
+                  Margin
+                </th>
+                <SortHeader sortKey="exit" sort={sort} onSort={setSort} title="Sort by exit date">
+                  Exit
+                </SortHeader>
+                <th scope="col" className="num">
+                  Realized P&amp;L
+                </th>
+                <th scope="col" className="num">
+                  Of investment
+                </th>
+                <EditHeader />
+              </tr>
+            </thead>
+            <tbody>
+              {trades.map((trade) => (
+                <ClosedRow
+                  key={trade.id}
+                  trade={trade}
+                  today={today}
+                  brokerNames={brokerNames}
+                  shareTitle={shareTitle}
+                  onEdit={onEdit}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
-  const shareTitle = `Share of the ${
-    term === 'all' ? 'total' : TERM_LABELS[term].toLowerCase()
-  } investment (${money(invested ?? 0)})`;
+// The open positions, under the new transaction form. Loading and empty states show here.
+export function TradesTable({ rows, today, term, brokerNames, loading, onExit, onEdit }) {
+  if (loading) return <p className="table-status">Loading transactions…</p>;
 
   if (rows.length === 0) {
     return (
@@ -517,30 +644,37 @@ export function TradesTable({
   }
 
   const open = rows.filter(isOpen);
+  if (open.length === 0) return null;
+  return (
+    <OpenTable
+      // Open trades by ticker A→Z, grouped by ticker and side for the averages.
+      groups={groupOpenTrades(open, today)}
+      count={open.length}
+      today={today}
+      brokerNames={brokerNames}
+      onExit={onExit}
+      onEdit={onEdit}
+    />
+  );
+}
+
+// The closed trades, in a card of their own below the form. Nothing while loading
+// or when no trade is closed.
+export function ClosedTrades({ rows, today, term, invested, brokerNames, loading, onEdit }) {
   const closed = rows.filter((trade) => !isOpen(trade));
+  if (loading || closed.length === 0) return null;
+
+  const shareTitle = `Share of the ${
+    term === 'all' ? 'total' : TERM_LABELS[term].toLowerCase()
+  } investment (${money(invested ?? 0)})`;
 
   return (
-    <>
-      {open.length > 0 && (
-        <OpenTable
-          // Open trades by ticker A→Z, grouped by ticker and side for the averages.
-          groups={groupOpenTrades(open, today)}
-          count={open.length}
-          today={today}
-          brokerNames={brokerNames}
-          onExit={onExit}
-          onEdit={onEdit}
-        />
-      )}
-      {closed.length > 0 && (
-        <ClosedTable
-          trades={closed}
-          today={today}
-          brokerNames={brokerNames}
-          shareTitle={shareTitle}
-          onEdit={onEdit}
-        />
-      )}
-    </>
+    <ClosedTable
+      trades={closed}
+      today={today}
+      brokerNames={brokerNames}
+      shareTitle={shareTitle}
+      onEdit={onEdit}
+    />
   );
 }

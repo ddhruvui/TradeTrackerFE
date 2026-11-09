@@ -16,7 +16,7 @@ export function sortTrades(trades, { key, dir }) {
   return [...trades].sort((a, b) => sign * KEYS[key](a, b));
 }
 
-// Open lots stay grouped by ticker for the merged average cells, so sorting
+// Open lots stay grouped by ticker into positions, so sorting
 // reorders whole groups. By Stock: ticker A→Z or Z→A (buys before shorts).
 // By Entry: lots within each group by entry, and groups by their first lot.
 export function sortOpenGroups(groups, { key, dir }) {

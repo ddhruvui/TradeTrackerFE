@@ -42,3 +42,29 @@ export function useStoredChoice(key, choices) {
   }, [key, value]);
   return [value, setValue];
 }
+
+// A set of keys remembered in this browser, with a toggle for one key.
+export function useStoredSet(key) {
+  const [keys, setKeys] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      return new Set(Array.isArray(saved) ? saved : []);
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify([...keys]));
+    } catch {
+      // Storage can be unavailable (private windows); the set just won't persist.
+    }
+  }, [key, keys]);
+  const toggle = (item) =>
+    setKeys((current) => {
+      const next = new Set(current);
+      if (!next.delete(item)) next.add(item);
+      return next;
+    });
+  return [keys, toggle];
+}

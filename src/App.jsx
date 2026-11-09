@@ -6,7 +6,7 @@ import { TERM_LABELS } from './labels.js';
 import { Segmented } from './components/Controls.jsx';
 import { SummaryCards } from './components/SummaryCards.jsx';
 import { AddTradeForm } from './components/AddTradeForm.jsx';
-import { TradesTable } from './components/TradesTable.jsx';
+import { ClosedTrades, TradesTable } from './components/TradesTable.jsx';
 import { EditTradeDialog } from './components/EditTradeDialog.jsx';
 import { InvestmentDialog } from './components/InvestmentDialog.jsx';
 import { Toast } from './components/Toast.jsx';
@@ -195,7 +195,6 @@ export default function App() {
             rows={trades}
             today={today}
             term={term}
-            invested={summary?.invested}
             brokerNames={brokerNames}
             loading={status === 'loading'}
             onExit={exitTrade}
@@ -203,6 +202,18 @@ export default function App() {
           />
         )}
       </section>
+
+      {status !== 'error' && (
+        <ClosedTrades
+          rows={trades}
+          today={today}
+          term={term}
+          invested={summary?.invested}
+          brokerNames={brokerNames}
+          loading={status === 'loading'}
+          onEdit={setEditing}
+        />
+      )}
 
       {editing && (
         <EditTradeDialog

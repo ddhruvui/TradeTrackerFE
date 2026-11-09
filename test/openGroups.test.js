@@ -41,6 +41,7 @@ test('averages are weighted by shares: 10 @ $100 and 30 @ $120 average $115', ()
   assert.equal(aapl.shares, 40);
   near(aapl.avgValue, 115);
   near(aapl.finalAvg, 115.5);
+  near(aapl.margin, 20);
 });
 
 test('a short’s final average takes the margin off, using the calculated margin when none is typed', () => {
@@ -48,6 +49,7 @@ test('a short’s final average takes the margin off, using the calculated margi
   const [short] = groupOpenTrades([lot('AAPL', 'short', 5, 130, '2026-10-17')], today);
   near(short.avgValue, 130);
   near(short.finalAvg, 129.934);
+  near(short.margin, 0.33);
 });
 
 test('buy targets are 2%, 5% and 6% above the final avg amt, rounded up', () => {
