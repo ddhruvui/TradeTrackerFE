@@ -73,3 +73,16 @@ test('an exact target is not pushed a cent either way', () => {
   assert.deepEqual(targetPrices('buy', 100).map((t) => t.price), [102, 105, 106]);
   assert.deepEqual(targetPrices('short', 100).map((t) => t.price), [98, 95, 94]);
 });
+
+test('NVDA lots 60 @ $186.40 (Nov 2) and 25 @ $191.75 (Nov 6) on Nov 9: break-even $188.19', () => {
+  const [nvda] = groupOpenTrades(
+    [lot('NVDA', 'buy', 60, 186.4, '2026-11-02'), lot('NVDA', 'buy', 25, 191.75, '2026-11-06')],
+    '2026-11-09',
+  );
+  near(nvda.margin, 18.12); // $14.92 + $3.20
+  assert.equal(Math.ceil(Number((nvda.finalAvg * 100).toFixed(6))) / 100, 188.19);
+  assert.deepEqual(
+    targetPrices('buy', nvda.finalAvg).map((t) => t.price),
+    [191.96, 197.6, 199.49],
+  );
+});

@@ -3,11 +3,12 @@ import { suggestTickers } from '../tickers.js';
 
 // The stock symbol box, with suggestions from the watchlist and symbols traded before.
 // Arrow keys move through them, Enter or a click picks one, Escape closes the list.
-export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange, traded }, ref) {
+export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange, traded, invalid, autoFocus }, ref) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const suggestions = open ? suggestTickers(value, traded) : [];
-  const showing = suggestions.length > 0;
+  // An exact match that's the only suggestion needs no list.
+  const showing = suggestions.length > 0 && !(suggestions.length === 1 && suggestions[0].symbol === value.trim().toUpperCase());
   const listId = `${id}-suggestions`;
 
   function pick(symbol) {
@@ -34,6 +35,7 @@ export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange
     } else if (event.key === 'Escape') {
       setOpen(false);
       event.preventDefault();
+      event.stopPropagation(); // close the list, not the panel
     }
   }
 
@@ -45,7 +47,7 @@ export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange
         className="input input--symbol"
         value={value}
         onChange={(e) => {
-          onChange(e.target.value);
+          onChange(e.target.value.toUpperCase());
           setOpen(true);
           setActive(0);
         }}
@@ -54,12 +56,15 @@ export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange
         placeholder="AAPL"
         maxLength={15}
         autoComplete="off"
+        data-autofocus={autoFocus ? '' : undefined}
         spellCheck={false}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={showing}
         aria-controls={listId}
         aria-activedescendant={showing ? `${listId}-${active}` : undefined}
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? `${id}-note` : undefined}
       />
       {showing && (
         <ul id={listId} className="suggest" role="listbox" aria-label="Suggested symbols">
@@ -75,7 +80,7 @@ export const SymbolInput = forwardRef(function SymbolInput({ id, value, onChange
               onClick={() => pick(symbol)}
             >
               <span className="suggest__symbol">{symbol}</span>
-              {before && <span className="suggest__tag">traded</span>}
+              {before && <span className="suggest__tag">traded before</span>}
             </li>
           ))}
         </ul>

@@ -27,6 +27,28 @@ export function marginCharge(trade, today) {
   return { amount: cents / 100, days, typed: false };
 }
 
+const centsUp = (dollars) => Math.ceil(Number((dollars * 100).toFixed(6))) / 100;
+
+// How an exit splits the lot's margin up to the exit date. Every exit pays its share:
+// selling 10 of 20 shares pays half, rounded up to the cent. The shares left keep
+// accruing at 6%/yr (auto), or keep the rest of a typed margin. Mirrors marginSplit
+// in TradeTrackerBE, which saves what the exit pays.
+// { charged, left: { amount, typed } | null, share, total }
+export function exitMarginSplit(trade, quantity, exitDate) {
+  const total = marginCharge({ ...trade, exitDate }, exitDate);
+  const closes = !(quantity < trade.quantity - 1e-9);
+  if (closes || !(quantity > 0)) {
+    return { charged: total.amount, left: null, share: 1, total: total.amount };
+  }
+  const share = quantity / trade.quantity;
+  const charged = centsUp(total.amount * share);
+  const leftQty = Math.round((trade.quantity - quantity) * 1e6) / 1e6;
+  const left = total.typed
+    ? { amount: Math.max(0, Math.round((total.amount - charged) * 100) / 100), typed: true }
+    : { amount: marginCharge({ ...trade, quantity: leftQty, exitDate }, exitDate).amount, typed: false };
+  return { charged, left, share, total: total.amount };
+}
+
 // The final amount per share: a buy cost you (total + margin) ÷ shares, a short
 // leaves you (total − margin) ÷ shares.
 export function finalPerShare(trade, charged) {

@@ -1,6 +1,7 @@
-// What an exit would realize, shown live on the open row before you confirm.
+// What an exit would realize, shown live in the Exit panel before you confirm.
 // The backend does the real math when you submit; this mirrors its rule:
-// price move × shares, minus margin only when the exit closes the last shares.
+// price move × shares, minus the margin this exit pays. Every exit pays its share
+// of the margin (see exitMarginSplit in marginCharge.js), so `margin` here is that share.
 // Returns null until the inputs describe a valid exit.
 export function previewExit(trade, { quantity, exitPrice, margin = 0 }) {
   if (!(exitPrice > 0) || !(quantity > 0) || !(margin >= 0)) return null;
@@ -8,14 +9,12 @@ export function previewExit(trade, { quantity, exitPrice, margin = 0 }) {
 
   const perShare =
     trade.side === 'short' ? trade.entryPrice - exitPrice : exitPrice - trade.entryPrice;
-  const closesPosition = Math.round((trade.quantity - quantity) * 1e6) <= 0;
-  const cents =
-    Math.round(perShare * quantity * 100) - (closesPosition ? Math.round(margin * 100) : 0);
+  const cents = Math.round(perShare * quantity * 100) - Math.round(margin * 100);
   return cents / 100;
 }
 
-// The calculated profit or loss of a closed trade from the Edit window's fields.
-// The whole position has exited, so margin comes off. Null until the fields make sense.
+// The calculated profit or loss of a closed trade from the Edit panel's fields.
+// The whole position has exited, so all its margin comes off. Null until the fields make sense.
 export function calculatedPnl({ side, quantity, entryPrice, exitPrice, margin = 0 }) {
   if (!(entryPrice > 0)) return null;
   return previewExit({ side, quantity, entryPrice }, { quantity, exitPrice, margin });

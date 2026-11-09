@@ -8,8 +8,15 @@ test('a full exit takes the margin off', () => {
   assert.equal(previewExit(position, { quantity: 40, exitPrice: 125.5, margin: 6.5 }), 283.5);
 });
 
-test('a partial exit leaves the margin for the final exit', () => {
-  assert.equal(previewExit(position, { quantity: 15, exitPrice: 125.5, margin: 6.5 }), 108.75);
+test('a partial exit takes off the margin share it pays', () => {
+  // 15 × $7.25 = $108.75, less this exit's share of the margin.
+  assert.equal(previewExit(position, { quantity: 15, exitPrice: 125.5, margin: 2.44 }), 106.31);
+  assert.equal(previewExit(position, { quantity: 15, exitPrice: 125.5, margin: 0 }), 108.75);
+});
+
+test('buying back 10 of AMD’s 20 shares at $245.16 with $8.83 margin realizes $60.57', () => {
+  const amd = { side: 'short', quantity: 20, entryPrice: 252.1 };
+  assert.equal(previewExit(amd, { quantity: 10, exitPrice: 245.16, margin: 8.83 }), 60.57);
 });
 
 test('margin deepens a loss: a $5 loss with $10 margin is −$15', () => {

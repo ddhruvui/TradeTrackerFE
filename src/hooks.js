@@ -43,6 +43,27 @@ export function useStoredChoice(key, choices) {
   return [value, setValue];
 }
 
+// A small value remembered in this browser as JSON, for things that must survive a
+// failed load (like knowing this is the test database).
+export function useStoredJson(key, fallback) {
+  const [value, setValue] = useState(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved == null ? fallback : JSON.parse(saved);
+    } catch {
+      return fallback;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Storage can be unavailable (private windows); the value just won't persist.
+    }
+  }, [key, value]);
+  return [value, setValue];
+}
+
 // A set of keys remembered in this browser, with a toggle for one key.
 export function useStoredSet(key) {
   const [keys, setKeys] = useState(() => {

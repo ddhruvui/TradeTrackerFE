@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  exitMarginSplit,
   finalChangePct,
   finalPerShare,
   marginCharge,
@@ -57,4 +58,37 @@ test('the bracketed % is the final amount against the entry price', () => {
   // (541.3252 − 540.8252) × 100 / 540.8252 ≈ 0.09%
   near(finalChangePct(position(), 541.3252), (0.5 * 100) / 540.8252);
   near(finalChangePct(position({ side: 'short' }), 540.3252), (-0.5 * 100) / 540.8252);
+});
+
+// Every exit pays its share of the margin so far; the shares left keep accruing.
+const nov9 = '2026-11-09';
+const amd = { side: 'short', quantity: 20, entryPrice: 252.1, entryDate: '2026-10-20', exitDate: null, margin: 0 };
+const nvda = { side: 'buy', quantity: 60, entryPrice: 186.4, entryDate: '2026-11-02', exitDate: null, margin: 0 };
+
+test('buying back 10 of 20 shares pays half the margin so far; the 10 left stay on auto', () => {
+  // $17.65 so far (21 days); half is $8.825, rounded up to $8.83.
+  assert.deepEqual(exitMarginSplit(amd, 10, nov9), {
+    charged: 8.83,
+    left: { amount: 8.83, typed: false },
+    share: 0.5,
+    total: 17.65,
+  });
+});
+
+test('selling 30 of 60 pays $7.46, and the 30 left keep accruing day by day', () => {
+  const split = exitMarginSplit(nvda, 30, nov9);
+  assert.equal(split.charged, 7.46);
+  assert.deepEqual(split.left, { amount: 7.46, typed: false });
+  // The next day the 30 left show $8.39: 30 × $186.40 × 9 days × 6 / 36000, rounded up.
+  assert.equal(marginCharge({ ...nvda, quantity: 30 }, '2026-11-10').amount, 8.39);
+});
+
+test('the exit that sells every share pays all of the margin', () => {
+  assert.deepEqual(exitMarginSplit(nvda, 60, nov9), { charged: 14.92, left: null, share: 1, total: 14.92 });
+});
+
+test('a typed margin splits so the parts add up to the whole', () => {
+  assert.deepEqual(exitMarginSplit({ ...amd, margin: 20 }, 10, nov9).left, { amount: 10, typed: true });
+  const split = exitMarginSplit({ ...amd, margin: 17.65 }, 10, nov9);
+  assert.deepEqual([split.charged, split.left.amount], [8.83, 8.82]);
 });
