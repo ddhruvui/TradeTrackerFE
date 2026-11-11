@@ -40,11 +40,19 @@ test('T15 NVDA: margin to date, break-even and targets follow the rules', async 
   const nvda = position(page, 'NVDA');
   await expect(nvda.locator('.pos__margin')).toHaveText('$18.12');
   await expect(nvda.locator('.pos__be')).toHaveText('$188.19');
-  await expect(nvda.locator('.targets .chip')).toHaveText(['+2%$191.96', '+5%$197.60', '+6%$199.49']);
+  await expect(nvda.locator('.targets .chip')).toHaveText(['1x$200.62', '2x$194.73', '3x$192.77', '4x$191.79']);
   // A short's targets sit below break-even, rounded down.
   const snow = position(page, 'SNOW', 'short');
   await expect(snow.locator('.pos__be')).toHaveText('$246.56');
-  await expect(snow.locator('.targets .chip')).toHaveText(['−2%$241.62', '−5%$234.23', '−6%$231.76']);
+  await expect(snow.locator('.targets .chip')).toHaveText(['1x$230.28', '2x$238.00', '3x$240.56', '4x$241.85']);
+});
+
+test('T15b an open position’s ticker opens Google Finance in a new tab', async ({ page }) => {
+  await openApp(page);
+  const link = position(page, 'NVDA').getByRole('link', { name: 'NVDA on Google Finance (opens in a new tab)' });
+  await expect(link).toHaveAttribute('href', 'https://www.google.com/finance?q=NVDA');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });
 
 test('T16 sorting moves whole positions', async ({ page }) => {
@@ -57,13 +65,15 @@ test('T16 sorting moves whole positions', async ({ page }) => {
   await expect(tickers).toHaveText(['NVDA', 'SNOW', 'PLTR', 'AMD', 'MSFT']);
 });
 
-test('T17 keyboard: chevron, each target and Sell are reachable with a visible focus ring', async ({ page }) => {
+test('T17 keyboard: chevron, ticker link, each target and Sell are reachable with a visible focus ring', async ({ page }) => {
   await openApp(page);
   const nvda = position(page, 'NVDA');
   await nvda.getByRole('button', { name: 'Show NVDA lots' }).focus();
-  for (const pct of ['+2%', '+5%', '+6%']) {
+  await page.keyboard.press('Tab');
+  await expect(nvda.getByRole('link', { name: /^NVDA on Google Finance/ })).toBeFocused();
+  for (const label of ['1x', '2x', '3x', '4x']) {
     await page.keyboard.press('Tab');
-    await expect(nvda.getByRole('button', { name: new RegExp(`\\${pct} target`) })).toBeFocused();
+    await expect(nvda.getByRole('button', { name: new RegExp(`${label} target`) })).toBeFocused();
   }
   await page.keyboard.press('Tab');
   await expect(nvda.getByRole('button', { name: 'Sell NVDA', exact: true })).toBeFocused();

@@ -179,18 +179,16 @@ export function ExitPanel({ group, lotId, startPrice, today, invested, brokerNam
         />
         <div className="chip-row">
           <span className="chip-row__label">Targets</span>
-          {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => (
+          {targetPrices(group.side, group.finalAvg).map(({ label, pct, price: target }) => (
             <button
-              key={pct}
+              key={label}
               type="button"
               className="chip"
               aria-pressed={Math.abs(Number(exitPrice) - target) < 0.001}
               onClick={() => setExitPrice(target.toFixed(2))}
+              title={`${isShort ? '−' : '+'}${pct}%`}
             >
-              <span className="chip__pct">
-                {isShort ? '−' : '+'}
-                {pct}%
-              </span>
+              <span className="chip__pct">{label}</span>
               {money(target)}
             </button>
           ))}

@@ -2,6 +2,7 @@ import { TERM_LABELS, TERM_NAMES, exitVerb } from '../labels.js';
 import { marginCharge } from '../marginCharge.js';
 import { targetPrices } from '../openGroups.js';
 import { nextSort } from '../sortTrades.js';
+import { googleFinanceUrl } from '../tickers.js';
 import { centsUp, money, price, qty, shortDate } from '../format.js';
 import { SidePill, TermTag } from './Controls.jsx';
 import { ChevronIcon, InfoIcon, LotBranch, PencilIcon, SortIcon } from './Icons.jsx';
@@ -118,7 +119,16 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
           </button>
           <div className="pos__title">
             <div className="pos__line">
-              <span className="ticker">{group.symbol}</span>
+              <a
+                className="ticker"
+                href={googleFinanceUrl(group.symbol)}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Open ${group.symbol} in Google Finance`}
+                aria-label={`${group.symbol} on Google Finance (opens in a new tab)`}
+              >
+                {group.symbol}
+              </a>
               <SidePill side={group.side} />
             </div>
             <span className="cell__sub pos__since">
@@ -151,20 +161,18 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
         </div>
         <div role="cell" className="cell pos__targets">
           <div className="targets">
-            {targetPrices(group.side, group.finalAvg).map(({ pct, price: target }) => {
+            {targetPrices(group.side, group.finalAvg).map(({ label, pct, price: target }) => {
               const sign = group.side === 'short' ? '−' : '+';
               return (
                 <button
-                  key={pct}
+                  key={label}
                   type="button"
                   className="chip"
                   onClick={() => onExit(null, target)}
-                  aria-label={`${verb} ${group.symbol} at ${money(target)}, the ${sign}${pct}% target`}
+                  title={`${sign}${pct}%`}
+                  aria-label={`${verb} ${group.symbol} at ${money(target)}, the ${label} target (${sign}${pct}%)`}
                 >
-                  <span className="chip__pct">
-                    {sign}
-                    {pct}%
-                  </span>
+                  <span className="chip__pct">{label}</span>
                   {money(target)}
                 </button>
               );
@@ -260,7 +268,7 @@ export function OpenPositions({ groups, today, brokerNames, expanded, onToggle, 
           Margin accrues at 6% a year (360-day year) from the entry date, unless you type your own amount. Each
           exit pays its share: selling 10 of 20 shares charges half the margin so far, and the rest keeps accruing
           until those shares close. Break-even is (cost + margin) ÷ shares for buys and (cost − margin) ÷ shares for
-          shorts; targets sit 2%, 5% and 6% past it. Nothing here counts as realized profit until you exit.
+          shorts; the 1x–4x targets sit 6.6%, 3.47%, 2.43% and 1.91% past it. Nothing here counts as realized profit until you exit.
         </p>
       </div>
     </>

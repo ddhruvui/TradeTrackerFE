@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { suggestTickers } from '../src/tickers.js';
+import { googleFinanceUrl, suggestTickers } from '../src/tickers.js';
 
 const symbols = (list) => list.map((s) => s.symbol);
 
@@ -27,4 +27,9 @@ test('previously traded symbols come before the watchlist and can be off it', ()
 
 test('suggestions are capped', () => {
   assert.equal(suggestTickers('a').length, 8);
+});
+
+test('a ticker links to its Google Finance page, which picks the exchange', () => {
+  assert.equal(googleFinanceUrl('QCOM'), 'https://www.google.com/finance?q=QCOM');
+  assert.equal(googleFinanceUrl('BRK-B'), 'https://www.google.com/finance?q=BRK-B');
 });

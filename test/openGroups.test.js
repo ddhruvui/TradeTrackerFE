@@ -52,26 +52,28 @@ test('a short’s final average takes the margin off, using the calculated margi
   near(short.margin, 0.33);
 });
 
-test('buy targets are 2%, 5% and 6% above the final avg amt, rounded up', () => {
-  // Final avg amt $543.0833 shows as $543.09; 1.02 × 543.09 = 553.9518 → 553.96.
+test('buy targets 1x–4x are 6.6%, 3.47%, 2.43% and 1.91% above the final avg amt, rounded up', () => {
+  // Final avg amt $543.0833 shows as $543.09; 1.066 × 543.09 = 578.93394 → 578.94.
   assert.deepEqual(targetPrices('buy', 543.0833), [
-    { pct: 2, price: 553.96 },
-    { pct: 5, price: 570.25 }, // 570.2445
-    { pct: 6, price: 575.68 }, // 575.6754
+    { label: '1x', pct: 6.6, price: 578.94 },
+    { label: '2x', pct: 3.47, price: 561.94 }, // 561.935223
+    { label: '3x', pct: 2.43, price: 556.29 }, // 556.287087
+    { label: '4x', pct: 1.91, price: 553.47 }, // 553.463019
   ]);
 });
 
-test('short targets are 2%, 5% and 6% below the final avg amt, rounded down', () => {
+test('short targets 1x–4x are 6.6%, 3.47%, 2.43% and 1.91% below the final avg amt, rounded down', () => {
   assert.deepEqual(targetPrices('short', 543.09), [
-    { pct: 2, price: 532.22 }, // 532.2282
-    { pct: 5, price: 515.93 }, // 515.9355
-    { pct: 6, price: 510.5 }, // 510.5046
+    { label: '1x', pct: 6.6, price: 507.24 }, // 507.24606
+    { label: '2x', pct: 3.47, price: 524.24 }, // 524.244777
+    { label: '3x', pct: 2.43, price: 529.89 }, // 529.892913
+    { label: '4x', pct: 1.91, price: 532.71 }, // 532.716981
   ]);
 });
 
 test('an exact target is not pushed a cent either way', () => {
-  assert.deepEqual(targetPrices('buy', 100).map((t) => t.price), [102, 105, 106]);
-  assert.deepEqual(targetPrices('short', 100).map((t) => t.price), [98, 95, 94]);
+  assert.deepEqual(targetPrices('buy', 100).map((t) => t.price), [106.6, 103.47, 102.43, 101.91]);
+  assert.deepEqual(targetPrices('short', 100).map((t) => t.price), [93.4, 96.53, 97.57, 98.09]);
 });
 
 test('NVDA lots 60 @ $186.40 (Nov 2) and 25 @ $191.75 (Nov 6) on Nov 9: break-even $188.19', () => {
@@ -83,6 +85,6 @@ test('NVDA lots 60 @ $186.40 (Nov 2) and 25 @ $191.75 (Nov 6) on Nov 9: break-ev
   assert.equal(Math.ceil(Number((nvda.finalAvg * 100).toFixed(6))) / 100, 188.19);
   assert.deepEqual(
     targetPrices('buy', nvda.finalAvg).map((t) => t.price),
-    [191.96, 197.6, 199.49],
+    [200.62, 194.73, 192.77, 191.79],
   );
 });

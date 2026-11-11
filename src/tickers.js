@@ -18,6 +18,12 @@ export const WATCHLIST = [
   'XOM',
 ];
 
+// A symbol's Google Finance page. Google picks the exchange itself: ?q=QCOM goes to
+// /finance/quote/QCOM:NASDAQ, ?q=JPM to JPM:NYSE and ?q=BRK-B to BRK.B:NYSE.
+export function googleFinanceUrl(symbol) {
+  return `https://www.google.com/finance?q=${encodeURIComponent(symbol)}`;
+}
+
 // Symbols matching what's typed: an exact match first, then ones that start with it,
 // then ones that contain it. Within each, symbols already traded come before the watchlist.
 // Returns [{ symbol, traded }].

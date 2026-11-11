@@ -483,6 +483,18 @@ kbd {
   letter-spacing: 0.01em;
 }
 
+/* An open position's ticker opens its Google Finance page in a new tab. */
+a.ticker {
+  border-radius: 3px;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.ticker:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .term-tag {
   display: inline-flex;
   align-items: center;
@@ -1035,9 +1047,10 @@ button.tag:hover {
   transform: rotate(90deg);
 }
 
+/* Four exit targets, two by two, so the column never wraps them 3 + 1. */
 .targets {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
   gap: 6px;
 }
 
@@ -2091,11 +2104,12 @@ button.tag:hover {
   }
 
   .pos__targets .targets {
+    display: flex;
     flex-wrap: nowrap;
     width: 100%;
   }
 
-  /* Percent over price, so three targets fit side by side on a phone. */
+  /* Label over price, so four targets fit side by side on a phone. */
   .targets .chip,
   .pos__targets .chip {
     flex: 1 1 0;

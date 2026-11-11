@@ -80,7 +80,7 @@ test('T39 a fixed margin on an open lot previews its effect on the position befo
   const effect = dialog.getByRole('region', { name: 'Effect on the NVDA position' });
   await expect(effect).toContainText('$18.12 → $23.20');
   await expect(effect).toContainText('$188.19 → $188.25');
-  await expect(effect).toContainText('$192.02 / $197.67 / $199.55');
+  await expect(effect).toContainText('$200.68 / $194.79 / $192.83 / $191.85');
   await dialog.getByRole('button', { name: 'Save changes' }).click();
   await expect(dialog).toBeHidden();
   const lot = page.locator('.lot', { hasText: 'Lot · Nov 2' });

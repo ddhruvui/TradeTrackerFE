@@ -50,17 +50,20 @@ export function groupOpenTrades(trades, today) {
   return groups.map((group) => ({ ...group, ...averages(group.trades, today) }));
 }
 
-// Exit targets from the Final avg amt as shown (rounded up to the cent):
-// a buy aims above it, rounded up; a short aims below it, rounded down.
-// Buy 2%: roundup(1.02 × final avg, 2). Short 2%: rounddown(0.98 × final avg, 2).
-export const TARGET_PCTS = [2, 5, 6];
+// Exit targets from the Final avg amt as shown (rounded up to the cent), in order
+// 1x 6.6%, 2x 3.47%, 3x 2.43%, 4x 1.91%: a buy aims above it, rounded up; a short
+// aims below it, rounded down.
+// Buy 1x: roundup(1.066 × final avg, 2). Short 1x: rounddown(0.934 × final avg, 2).
+export const TARGET_PCTS = [6.6, 3.47, 2.43, 1.91];
 
+// [{ label: '1x', pct: 6.6, price }, …], in TARGET_PCTS order.
 export function targetPrices(side, finalAvg) {
   const baseCents = Math.ceil(Number((finalAvg * 100).toFixed(6)));
-  return TARGET_PCTS.map((pct) => {
-    // Whole cents × whole percent stays an exact integer before the last division.
-    const scaled = baseCents * (side === 'short' ? 100 - pct : 100 + pct);
-    const cents = side === 'short' ? Math.floor(scaled / 100) : Math.ceil(scaled / 100);
-    return { pct, price: cents / 100 };
+  return TARGET_PCTS.map((pct, i) => {
+    // Whole cents × hundredths of a percent stays an exact integer before the last division.
+    const bp = Math.round(pct * 100);
+    const scaled = baseCents * (side === 'short' ? 10000 - bp : 10000 + bp);
+    const cents = side === 'short' ? Math.floor(scaled / 10000) : Math.ceil(scaled / 10000);
+    return { label: `${i + 1}x`, pct, price: cents / 100 };
   });
 }
