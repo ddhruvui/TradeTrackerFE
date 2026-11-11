@@ -50,7 +50,7 @@ test('T15 NVDA: margin to date, break-even and targets follow the rules', async 
 test('T15b an open position’s ticker opens Google Finance in a new tab', async ({ page }) => {
   await openApp(page);
   const link = position(page, 'NVDA').getByRole('link', { name: 'NVDA on Google Finance (opens in a new tab)' });
-  await expect(link).toHaveAttribute('href', 'https://www.google.com/finance?q=NVDA');
+  await expect(link).toHaveAttribute('href', 'https://www.google.com/finance/quote/NVDA:NASDAQ');
   await expect(link).toHaveAttribute('target', '_blank');
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 });

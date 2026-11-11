@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { googleFinanceUrl, suggestTickers } from '../src/tickers.js';
+import { WATCHLIST, exchangeOf, googleFinanceUrl, suggestTickers } from '../src/tickers.js';
 
 const symbols = (list) => list.map((s) => s.symbol);
 
@@ -29,7 +29,18 @@ test('suggestions are capped', () => {
   assert.equal(suggestTickers('a').length, 8);
 });
 
-test('a ticker links to its Google Finance page, which picks the exchange', () => {
-  assert.equal(googleFinanceUrl('QCOM'), 'https://www.google.com/finance?q=QCOM');
-  assert.equal(googleFinanceUrl('BRK-B'), 'https://www.google.com/finance?q=BRK-B');
+test('a ticker links to its Google Finance quote page on its own exchange', () => {
+  assert.equal(googleFinanceUrl('ADI'), 'https://www.google.com/finance/quote/ADI:NASDAQ');
+  assert.equal(googleFinanceUrl('QCOM'), 'https://www.google.com/finance/quote/QCOM:NASDAQ');
+  assert.equal(googleFinanceUrl('JPM'), 'https://www.google.com/finance/quote/JPM:NYSE');
+  assert.equal(googleFinanceUrl('VOO'), 'https://www.google.com/finance/quote/VOO:NYSEARCA');
+  assert.equal(googleFinanceUrl('BRK-B'), 'https://www.google.com/finance/quote/BRK.B:NYSE');
+});
+
+test('every watchlist symbol has an exchange, so none falls back to the search', () => {
+  assert.deepEqual(WATCHLIST.filter((symbol) => !exchangeOf(symbol)), []);
+});
+
+test('a symbol with no known exchange falls back to Google’s search', () => {
+  assert.equal(googleFinanceUrl('ZZZZ'), 'https://www.google.com/finance?q=ZZZZ');
 });

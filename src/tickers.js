@@ -18,10 +18,49 @@ export const WATCHLIST = [
   'XOM',
 ];
 
-// A symbol's Google Finance page. Google picks the exchange itself: ?q=QCOM goes to
-// /finance/quote/QCOM:NASDAQ, ?q=JPM to JPM:NYSE and ?q=BRK-B to BRK.B:NYSE.
+// Where each symbol trades: the watchlist plus symbols traded off it (CRCL, VOO).
+// Checked against Google Finance's quote pages in Nov 2026. Add a symbol here when
+// you start trading one that isn't listed.
+const LISTINGS = {
+  NASDAQ: [
+    'AAL', 'AAPL', 'ABNB', 'ADI', 'ADP', 'AEP', 'AMAT', 'AMD', 'AMGN', 'AMZN',
+    'ARM', 'ASML', 'AVGO', 'BKNG', 'CEG', 'CME', 'COST', 'CRWD', 'CSCO', 'CSX',
+    'CTAS', 'DASH', 'DDOG', 'EQIX', 'GILD', 'GOOG', 'GOOGL', 'HLT', 'HOOD', 'INTC',
+    'ISRG', 'KLAC', 'LIN', 'LRCX', 'MAR', 'MDLZ', 'META', 'MNST', 'MRNA', 'MRVL',
+    'MSFT', 'MU', 'NFLX', 'NVDA', 'PANW', 'PEP', 'PLTR', 'QCOM', 'QQQ', 'SBUX',
+    'STX', 'TSLA', 'TXN', 'UAL', 'VRTX', 'WDC',
+  ],
+  NYSE: [
+    'ABBV', 'ABT', 'AMT', 'ANET', 'APD', 'APH', 'AXP', 'BA', 'BAC', 'BLK',
+    'BMY', 'BNY', 'BRK-B', 'C', 'CAT', 'CB', 'COF', 'COP', 'CRCL', 'CRM',
+    'CVX', 'D', 'DE', 'DELL', 'DHR', 'DIS', 'DLR', 'DUK', 'ECL', 'EMR',
+    'ETN', 'FCX', 'GD', 'GE', 'GEV', 'GLW', 'GS', 'HD', 'IBM', 'JCI',
+    'JNJ', 'JPM', 'KO', 'LLY', 'LMT', 'LOW', 'MA', 'MCD', 'MDT', 'MMM',
+    'MO', 'MPC', 'MRK', 'MS', 'NEE', 'NEM', 'NOW', 'NUE', 'O', 'ORCL',
+    'PFE', 'PG', 'PGR', 'PH', 'PLD', 'PM', 'PSA', 'PSX', 'PWR', 'RTX',
+    'SCHW', 'SHW', 'SNOW', 'SO', 'SPG', 'SPGI', 'SRE', 'T', 'TJX', 'TMO',
+    'TSM', 'TT', 'UBER', 'UNH', 'UNP', 'UPS', 'USB', 'V', 'VLO', 'VST',
+    'VZ', 'WELL', 'WFC', 'WM', 'XOM',
+  ],
+  NYSEARCA: [
+    'SPY', 'VOO',
+  ],
+};
+
+const EXCHANGES = new Map(
+  Object.entries(LISTINGS).flatMap(([exchange, symbols]) => symbols.map((symbol) => [symbol, exchange])),
+);
+
+export const exchangeOf = (symbol) => EXCHANGES.get(symbol);
+
+// A symbol's Google Finance quote page, like /finance/quote/ADI:NASDAQ. Google writes
+// class shares with a dot (BRK-B is BRK.B:NYSE). A symbol with no known exchange falls
+// back to Google's ?q= search, which finds some symbols but lands others (ADI, AMD,
+// META, VOO…) on the Finance home page, so the listing above is what makes it reliable.
 export function googleFinanceUrl(symbol) {
-  return `https://www.google.com/finance?q=${encodeURIComponent(symbol)}`;
+  const exchange = exchangeOf(symbol);
+  if (!exchange) return `https://www.google.com/finance?q=${encodeURIComponent(symbol)}`;
+  return `https://www.google.com/finance/quote/${encodeURIComponent(symbol.replace('-', '.'))}:${exchange}`;
 }
 
 // Symbols matching what's typed: an exact match first, then ones that start with it,
