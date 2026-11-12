@@ -109,6 +109,20 @@ export default function App() {
     load();
   }, [load]);
 
+  // Last prices colour the exit targets a position has reached. They're optional:
+  // if they can't be loaded the targets just stay plain. Re-read with the trades.
+  const [lastPrices, setLastPrices] = useState({});
+  useEffect(() => {
+    let current = true;
+    api
+      .prices()
+      .then(({ prices }) => current && setLastPrices(prices ?? {}))
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [trades]);
+
   function retry() {
     setStatus('loading');
     if (!info.brokers.length) loadInfo();
@@ -254,6 +268,7 @@ export default function App() {
         groups={groups}
         today={today}
         brokerNames={brokerNames}
+        lastPrices={lastPrices}
         expanded={expanded}
         onToggle={toggleExpanded}
         sort={openSort}
@@ -436,6 +451,7 @@ export default function App() {
           group={exitGroup}
           lotId={panel.lotId}
           startPrice={panel.price}
+          lastPrice={lastPrices[exitGroup.symbol]}
           today={today}
           invested={summary?.invested ?? 0}
           brokerNames={brokerNames}

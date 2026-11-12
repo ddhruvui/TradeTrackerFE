@@ -43,7 +43,7 @@
   --radius-sm: 9px;
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --open-cols: minmax(170px, 1fr) 112px 120px 72px 104px 108px 112px minmax(340px, 1.4fr) 112px;
+  --open-cols: minmax(170px, 1fr) 112px 120px 72px 104px 108px 112px 172px minmax(340px, 1.4fr) 112px;
   --closed-cols: minmax(190px, 1.4fr) 112px 120px 64px 112px 112px 96px 88px 156px 100px 52px;
 }
 
@@ -592,6 +592,24 @@ button.tag:hover {
   background: var(--hover);
 }
 
+/* An exit target the stock's last price has reached. */
+.chip--reached {
+  border-color: var(--gain);
+  background: var(--gain-soft);
+  color: var(--gain);
+  font-weight: 600;
+}
+
+.chip--reached .chip__pct {
+  color: inherit;
+}
+
+.chip--reached:hover {
+  border-color: var(--gain);
+  background: var(--gain-soft);
+  filter: brightness(0.97);
+}
+
 .chip[aria-pressed='true'] {
   border-color: var(--ink);
   background: var(--ink);
@@ -900,11 +918,29 @@ button.tag:hover {
 }
 
 .list {
-  min-width: 1250px;
+  min-width: 1420px;
 }
 
 .targets .chip {
   padding: 0 9px;
+}
+
+/* The last price's distance from break-even: green on the side the position profits on. */
+.pos__last {
+  white-space: nowrap;
+}
+
+.pos__last-pct {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pos__last-pct.is-gain {
+  color: var(--gain);
+}
+
+.pos__last-pct.is-loss {
+  color: var(--loss);
 }
 
 .list__row {
@@ -2043,6 +2079,7 @@ button.tag:hover {
     grid-template-areas:
       'name shares'
       'avg be'
+      'last last'
       'targets targets'
       'meta actions';
     gap: 12px;
@@ -2075,7 +2112,8 @@ button.tag:hover {
   }
 
   .pos__avg,
-  .pos__be {
+  .pos__be,
+  .pos__last {
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
@@ -2089,8 +2127,13 @@ button.tag:hover {
     grid-area: be;
   }
 
+  .pos__last {
+    grid-area: last;
+  }
+
   .pos__avg::before,
-  .pos__be::before {
+  .pos__be::before,
+  .pos__last::before {
     content: attr(data-label);
     font-size: 12px;
     font-weight: 400;

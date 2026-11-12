@@ -50,13 +50,32 @@ export function groupOpenTrades(trades, today) {
   return groups.map((group) => ({ ...group, ...averages(group.trades, today) }));
 }
 
-// Exit targets from the Final avg amt as shown (rounded up to the cent), in order
-// 1x 6.6%, 2x 3.47%, 3x 2.43%, 4x 1.91%: a buy aims above it, rounded up; a short
-// aims below it, rounded down.
+// Exit targets from the Final avg amt as shown (rounded up to the cent), listed
+// nearest first: 4x 1.91%, 3x 2.43%, 2x 3.47%, 1x 6.6%. A buy aims above it,
+// rounded up; a short aims below it, rounded down.
 // Buy 1x: roundup(1.066 × final avg, 2). Short 1x: rounddown(0.934 × final avg, 2).
-export const TARGET_PCTS = [6.6, 3.47, 2.43, 1.91];
+export const TARGET_PCTS = [1.91, 2.43, 3.47, 6.6];
 
-// [{ label: '1x', pct: 6.6, price }, …], in TARGET_PCTS order.
+// How far the last price is from break-even as shown (rounded up to the cent), as a
+// percentage of it: +3.42 means 3.42% above. `ahead` says whether that's the side the
+// position profits on: above for a buy, below for a short. Null without a last price.
+export function lastVsBreakEven(side, finalAvg, lastPrice) {
+  if (!Number.isFinite(lastPrice)) return null;
+  const breakEven = Math.ceil(Number((finalAvg * 100).toFixed(6))) / 100;
+  if (!(breakEven > 0)) return null;
+  const pct = ((lastPrice - breakEven) / breakEven) * 100;
+  const shown = Number(pct.toFixed(2));
+  return { pct, ahead: shown === 0 ? null : side === 'short' ? shown < 0 : shown > 0 };
+}
+
+// A target is reached once the last price is at or past it: at or above it for a buy,
+// at or below it for a short. No last price means not reached.
+export function targetReached(side, target, lastPrice) {
+  if (!Number.isFinite(lastPrice)) return false;
+  return side === 'short' ? lastPrice <= target : target <= lastPrice;
+}
+
+// [{ label: '4x', pct: 1.91, price }, …], in TARGET_PCTS order.
 export function targetPrices(side, finalAvg) {
   const baseCents = Math.ceil(Number((finalAvg * 100).toFixed(6)));
   return TARGET_PCTS.map((pct, i) => {
@@ -64,6 +83,6 @@ export function targetPrices(side, finalAvg) {
     const bp = Math.round(pct * 100);
     const scaled = baseCents * (side === 'short' ? 10000 - bp : 10000 + bp);
     const cents = side === 'short' ? Math.floor(scaled / 10000) : Math.ceil(scaled / 10000);
-    return { label: `${i + 1}x`, pct, price: cents / 100 };
+    return { label: `${TARGET_PCTS.length - i}x`, pct, price: cents / 100 };
   });
 }

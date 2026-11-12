@@ -32,7 +32,9 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm --prefix ../TradeTrackerBE start',
-      env: { TEST_DB: 'true', MONGO_DB_Test: E2E_DB, API_PORT: String(API_PORT), HOST: '127.0.0.1' },
+      // LAST_PRICE_DB: last prices come from the e2e database (none), not the live upload;
+      // tests that need them answer /api/prices themselves.
+      env: { TEST_DB: 'true', MONGO_DB_Test: E2E_DB, LAST_PRICE_DB: E2E_DB, API_PORT: String(API_PORT), HOST: '127.0.0.1' },
       url: `http://127.0.0.1:${API_PORT}/api/info`,
       reuseExistingServer: false,
       timeout: 60_000,

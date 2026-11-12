@@ -1,9 +1,9 @@
 import { TERM_LABELS, TERM_NAMES, exitVerb } from '../labels.js';
 import { marginCharge } from '../marginCharge.js';
-import { targetPrices } from '../openGroups.js';
+import { lastVsBreakEven, targetPrices, targetReached } from '../openGroups.js';
 import { nextSort } from '../sortTrades.js';
 import { googleFinanceUrl } from '../tickers.js';
-import { centsUp, money, price, qty, shortDate } from '../format.js';
+import { centsUp, money, price, qty, shortDate, signedPct2 } from '../format.js';
 import { SidePill, TermTag } from './Controls.jsx';
 import { ChevronIcon, InfoIcon, LotBranch, PencilIcon, SortIcon } from './Icons.jsx';
 
@@ -64,6 +64,7 @@ function LotRow({ trade, today, brokerNames, onExit, onEdit }) {
       </div>
       <div role="cell" className="cell lot__col" />
       <div role="cell" className="cell lot__col" />
+      <div role="cell" className="cell lot__col" />
       <p role="cell" className="lot__summary">
         {qty(trade.quantity)} sh at {price(trade.entryPrice)} · margin {money(charge.amount)}
         {charge.typed ? ' fixed' : ''}
@@ -88,7 +89,7 @@ function LotRow({ trade, today, brokerNames, onExit, onEdit }) {
 
 // A position: one row with the totals over its open lots (shares, average entry,
 // margin to date, break-even and exit targets) and, when expanded, a row per lot.
-function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, onEdit }) {
+function PositionRows({ group, today, brokerNames, lastPrice, expanded, onToggle, onExit, onEdit }) {
   const [first] = group.trades;
   const lots = group.trades.length;
   const lotsText = `${lots} ${lots === 1 ? 'lot' : 'lots'}`;
@@ -102,6 +103,7 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
   const termText = term.value ? TERM_NAMES[term.value] : 'Mixed terms';
   const verb = exitVerb(group.side);
   const panelId = `lots-${group.symbol}-${group.side}`;
+  const vsBreakEven = lastVsBreakEven(group.side, group.finalAvg, lastPrice);
 
   return (
     <>
@@ -159,18 +161,38 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
         <div role="cell" className="cell cell--num pos__be" data-label="Break-even" style={{ fontWeight: 600 }}>
           {centsUp(group.finalAvg)}
         </div>
+        <div role="cell" className="cell cell--num pos__last" data-label="Last price">
+          {vsBreakEven ? (
+            <span>
+              {money(lastPrice)}{' '}
+              <span
+                className={`pos__last-pct${vsBreakEven.ahead == null ? '' : vsBreakEven.ahead ? ' is-gain' : ' is-loss'}`}
+                title="Last price compared with break-even"
+              >
+                ({signedPct2(vsBreakEven.pct)})
+                <span className="visually-hidden"> from break-even</span>
+              </span>
+            </span>
+          ) : (
+            <span className="cell__sub" title="No last price for this stock">
+              –
+            </span>
+          )}
+        </div>
         <div role="cell" className="cell pos__targets">
           <div className="targets">
             {targetPrices(group.side, group.finalAvg).map(({ label, pct, price: target }) => {
               const sign = group.side === 'short' ? '−' : '+';
+              const reached = targetReached(group.side, target, lastPrice);
+              const reachedText = reached ? `, reached: last price ${money(lastPrice)}` : '';
               return (
                 <button
                   key={label}
                   type="button"
-                  className="chip"
+                  className={reached ? 'chip chip--reached' : 'chip'}
                   onClick={() => onExit(null, target)}
-                  title={`${sign}${pct}%`}
-                  aria-label={`${verb} ${group.symbol} at ${money(target)}, the ${label} target (${sign}${pct}%)`}
+                  title={`${sign}${pct}%${reachedText}`}
+                  aria-label={`${verb} ${group.symbol} at ${money(target)}, the ${label} target (${sign}${pct}%)${reachedText}`}
                 >
                   <span className="chip__pct">{label}</span>
                   {money(target)}
@@ -214,7 +236,7 @@ function PositionRows({ group, today, brokerNames, expanded, onToggle, onExit, o
 
 // The open positions, grouped by ticker and side. `onExit(group, { lotId, price })`
 // opens the Exit panel; `onEdit(trade)` opens a lot's Edit panel.
-export function OpenPositions({ groups, today, brokerNames, expanded, onToggle, sort, onSort, onExit, onEdit }) {
+export function OpenPositions({ groups, today, brokerNames, lastPrices = {}, expanded, onToggle, sort, onSort, onExit, onEdit }) {
   return (
     <>
       <div className="list-scroll">
@@ -241,6 +263,9 @@ export function OpenPositions({ groups, today, brokerNames, expanded, onToggle, 
             <div role="columnheader" className="cell cell--num">
               Break-even
             </div>
+            <div role="columnheader" className="cell cell--num">
+              Last price
+            </div>
             <div role="columnheader" className="cell">
               Exit targets
             </div>
@@ -253,6 +278,7 @@ export function OpenPositions({ groups, today, brokerNames, expanded, onToggle, 
               key={groupKey(group)}
               group={group}
               today={today}
+              lastPrice={lastPrices[group.symbol]}
               brokerNames={brokerNames}
               expanded={expanded.has(groupKey(group))}
               onToggle={() => onToggle(groupKey(group))}
@@ -268,7 +294,7 @@ export function OpenPositions({ groups, today, brokerNames, expanded, onToggle, 
           Margin accrues at 6% a year (360-day year) from the entry date, unless you type your own amount. Each
           exit pays its share: selling 10 of 20 shares charges half the margin so far, and the rest keeps accruing
           until those shares close. Break-even is (cost + margin) ÷ shares for buys and (cost − margin) ÷ shares for
-          shorts; the 1x–4x targets sit 6.6%, 3.47%, 2.43% and 1.91% past it. Nothing here counts as realized profit until you exit.
+          shorts; the 4x–1x targets sit 1.91%, 2.43%, 3.47% and 6.6% past it, and turn green once the stock’s last price has reached them. Last price shows how far it is from break-even, in brackets. Nothing here counts as realized profit until you exit.
         </p>
       </div>
     </>

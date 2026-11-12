@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { TERM_NAMES, exitVerb } from '../labels.js';
 import { exitMarginSplit, marginCharge } from '../marginCharge.js';
-import { targetPrices } from '../openGroups.js';
+import { targetPrices, targetReached } from '../openGroups.js';
 import { previewExit } from '../preview.js';
 import { exitProblems } from '../checks.js';
 import { centsUp, money, pctArrow, price, qty, shortDate, signedMoney } from '../format.js';
@@ -14,7 +14,7 @@ const oldestFirst = (trades) => [...trades].sort((a, b) => (a.entryDate < b.entr
 // Sell a buy or buy back a short: pick the lot (oldest first), then shares, price and
 // date. The result sits right under the inputs and shows its working. Every exit pays
 // its share of the lot's margin so far; the shares left keep accruing.
-export function ExitPanel({ group, lotId, startPrice, today, invested, brokerNames, onExit, onEditLot, onClose }) {
+export function ExitPanel({ group, lotId, startPrice, lastPrice, today, invested, brokerNames, onExit, onEditLot, onClose }) {
   const lots = oldestFirst(group.trades);
   const [chosenId, setChosenId] = useState(lotId ?? lots[0].id);
   const lot = lots.find((t) => t.id === chosenId) ?? lots[0];
@@ -179,19 +179,23 @@ export function ExitPanel({ group, lotId, startPrice, today, invested, brokerNam
         />
         <div className="chip-row">
           <span className="chip-row__label">Targets</span>
-          {targetPrices(group.side, group.finalAvg).map(({ label, pct, price: target }) => (
-            <button
-              key={label}
-              type="button"
-              className="chip"
-              aria-pressed={Math.abs(Number(exitPrice) - target) < 0.001}
-              onClick={() => setExitPrice(target.toFixed(2))}
-              title={`${isShort ? '−' : '+'}${pct}%`}
-            >
-              <span className="chip__pct">{label}</span>
-              {money(target)}
-            </button>
-          ))}
+          {targetPrices(group.side, group.finalAvg).map(({ label, pct, price: target }) => {
+            const reached = targetReached(group.side, target, lastPrice);
+            return (
+              <button
+                key={label}
+                type="button"
+                className={reached ? 'chip chip--reached' : 'chip'}
+                aria-pressed={Math.abs(Number(exitPrice) - target) < 0.001}
+                onClick={() => setExitPrice(target.toFixed(2))}
+                title={`${isShort ? '−' : '+'}${pct}%${reached ? `, reached: last price ${money(lastPrice)}` : ''}`}
+              >
+                <span className="chip__pct">{label}</span>
+                {money(target)}
+                {reached && <span className="visually-hidden"> (reached)</span>}
+              </button>
+            );
+          })}
         </div>
       </Field>
 

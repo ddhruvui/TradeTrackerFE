@@ -39,6 +39,8 @@ export const api = {
   // Realized totals for this week, month, year and overall, on the viewer's calendar,
   // plus the investment behind the view and each total as a share of it.
   summary: (term, today) => request(`/summary?${query({ term, today })}`),
+  // Each stock's last price, from the LastPrice database: { uploadedAt, prices: { NVDA: 163.44 } }.
+  prices: () => request('/prices'),
   // The amount invested in each term: { short, mid, long } (All is their sum).
   saveInvestment: (amounts) => request('/investment', { method: 'PATCH', body: amounts }),
   create: (trade) => request('/trades', { method: 'POST', body: trade }),

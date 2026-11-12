@@ -31,6 +31,15 @@ const percent2Format = new Intl.NumberFormat('en-US', {
 // Two decimals and no plus sign: 0.09%, −0.12%.
 export const pct2 = (n) => withMinus(percent2Format.format(n / 100));
 
+const signedPct2Format = new Intl.NumberFormat('en-US', {
+  style: 'percent',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  signDisplay: 'exceptZero',
+});
+// Two decimals with its sign: +3.42%, −0.12%, 0.00%.
+export const signedPct2 = (n) => withMinus(signedPct2Format.format(n / 100));
+
 // A share of the investment with an arrow for its direction: ↑ 10%, ↓ 2.5%.
 const shareFormat = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 });
 export const pctArrow = (n) =>
