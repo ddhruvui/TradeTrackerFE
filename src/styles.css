@@ -43,7 +43,7 @@
   --radius-sm: 9px;
   --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  --open-cols: minmax(170px, 1fr) 112px 120px 72px 104px 108px 112px 172px minmax(340px, 1.4fr) 112px;
+  --open-cols: minmax(176px, 1fr) 100px 110px 60px 92px 106px 96px 132px 222px 104px;
   --closed-cols: minmax(190px, 1.4fr) 112px 120px 64px 112px 112px 96px 88px 156px 100px 52px;
 }
 
@@ -918,15 +918,30 @@ button.tag:hover {
 }
 
 .list {
-  min-width: 1420px;
+  min-width: 1250px;
+}
+
+/* Open positions fit a laptop screen without scrolling sideways: tighter cells, and
+   the exit targets take only the room their two-by-two chips need. */
+.list--open {
+  min-width: 1198px;
+}
+
+.list--open .cell {
+  padding: 0 10px;
 }
 
 .targets .chip {
-  padding: 0 9px;
+  padding: 0 7px;
 }
 
 /* The last price's distance from break-even: green on the side the position profits on. */
-.pos__last {
+.pos__last > span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  column-gap: 4px;
   white-space: nowrap;
 }
 
@@ -2131,6 +2146,10 @@ button.tag:hover {
     grid-area: last;
   }
 
+  .pos__last > span {
+    justify-content: flex-start;
+  }
+
   .pos__avg::before,
   .pos__be::before,
   .pos__last::before {
@@ -2340,6 +2359,31 @@ button.tag:hover {
   .closed-row__dates,
   .closed-row__meta {
     display: none;
+  }
+
+  /* On a window too narrow for every column the list scrolls sideways, but Sell and
+     Buy back stay pinned to its right edge. */
+  .list--open .list__row {
+    background: var(--surface);
+  }
+
+  .list--open .list__head {
+    background: var(--surface-2);
+  }
+
+  .list--open .lot {
+    background: var(--sunken);
+  }
+
+  .list--open .pos:hover {
+    background: var(--hover);
+  }
+
+  .list--open .list__row > :last-child {
+    position: sticky;
+    right: 0;
+    align-self: stretch;
+    background: inherit;
   }
 }
 
