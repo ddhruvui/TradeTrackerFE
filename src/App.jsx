@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
-import { longDate, money, price, qty, signedMoney } from './format.js';
+import { fullTime, longDate, money, price, qty, signedMoney, stampTime } from './format.js';
 import { useStoredChoice, useStoredJson, useStoredSet, useToday } from './hooks.js';
 import { TERM_LABELS, TERM_NAMES } from './labels.js';
 import { groupOpenTrades } from './openGroups.js';
@@ -111,17 +111,24 @@ export default function App() {
 
   // Last prices colour the exit targets a position has reached. They're optional:
   // if they can't be loaded the targets just stay plain. Re-read with the trades.
+  // When they were uploaded shows next to Realized profit.
   const [lastPrices, setLastPrices] = useState({});
+  const [pricesAt, setPricesAt] = useState(null);
   useEffect(() => {
     let current = true;
     api
       .prices()
-      .then(({ prices }) => current && setLastPrices(prices ?? {}))
+      .then(({ uploadedAt, prices }) => {
+        if (!current) return;
+        setLastPrices(prices ?? {});
+        setPricesAt(uploadedAt ?? null);
+      })
       .catch(() => {});
     return () => {
       current = false;
     };
   }, [trades]);
+  const priceStamp = stampTime(pricesAt, today);
 
   function retry() {
     setStatus('loading');
@@ -359,6 +366,14 @@ export default function App() {
             <h2 id="realized-title">Realized profit</h2>
             <span className="section-head__sub">
               {term === 'all' ? 'All terms' : TERM_LABELS[term]} · as of {longDate(today)}
+              {priceStamp && (
+                <span className="section-head__stamp">
+                  {' · '}last price{' '}
+                  <time dateTime={pricesAt} title={`Last prices uploaded ${fullTime(pricesAt)}`}>
+                    {priceStamp}
+                  </time>
+                </span>
+              )}
             </span>
           </div>
           <SummaryStrip

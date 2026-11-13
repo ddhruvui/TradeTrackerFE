@@ -61,3 +61,21 @@ export const weekdayDate = (iso) => weekdayMonthDay.format(utc(iso));
 export const longDate = (iso) => fullDay.format(utc(iso));
 export const monthYear = (iso) => monthYearFormat.format(utc(iso));
 export const heldFor = (days) => (days <= 0 ? 'same day' : days === 1 ? '1 day' : `${days} days`);
+
+// A moment, such as when the last prices were uploaded, in the viewer's own time:
+// "today, 3:32 PM", "Nov 12, 3:32 PM", or "Nov 12, 2025, 3:32 PM" from another year.
+// Null if it can't be read. timeZone is for the tests; the page uses the browser's.
+export function stampTime(iso, today, timeZone) {
+  const at = iso ? new Date(iso) : null;
+  if (!at || Number.isNaN(at.getTime())) return null;
+  const format = (options) => new Intl.DateTimeFormat('en-US', { ...options, timeZone }).format(at);
+  const day = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }).format(at);
+  const clock = { hour: 'numeric', minute: '2-digit' };
+  if (day === today) return `today, ${format(clock)}`;
+  const year = day.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' };
+  return format({ month: 'short', day: 'numeric', ...year, ...clock });
+}
+
+// The same moment in full, for a tooltip: "Thursday, November 12, 2026 at 3:32:22 PM EST".
+export const fullTime = (iso, timeZone) =>
+  new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'long', timeZone }).format(new Date(iso));

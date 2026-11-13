@@ -260,6 +260,11 @@ kbd {
   color: var(--muted);
 }
 
+/* When the last prices were uploaded; wraps onto its own line as a whole. */
+.section-head__stamp {
+  white-space: nowrap;
+}
+
 /* Buttons */
 
 .btn {
