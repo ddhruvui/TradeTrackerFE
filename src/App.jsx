@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
 import { fullTime, longDate, money, price, qty, signedMoney, stampTime } from './format.js';
-import { useStoredChoice, useStoredJson, useStoredSet, useToday } from './hooks.js';
+import { useRefreshEvery, useStoredChoice, useStoredJson, useStoredSet, useToday } from './hooks.js';
 import { TERM_LABELS, TERM_NAMES } from './labels.js';
 import { groupOpenTrades } from './openGroups.js';
 import { sortOpenGroups, sortTrades } from './sortTrades.js';
@@ -26,6 +26,7 @@ const FILTERS = [
 ];
 const FILTER_KEYS = FILTERS.map(([key]) => key);
 const TABS = ['open', 'closed'];
+const PRICE_REFRESH_MS = 10 * 60_000;
 const isOpen = (trade) => trade.exitPrice == null;
 const isTyping = (el) => Boolean(el) && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
@@ -110,24 +111,25 @@ export default function App() {
   }, [load]);
 
   // Last prices colour the exit targets a position has reached. They're optional:
-  // if they can't be loaded the targets just stay plain. Re-read with the trades.
+  // if they can't be loaded the targets just stay plain. Re-read with the trades and
+  // every 10 minutes, so a new upload shows without reloading the page.
   // When they were uploaded shows next to Realized profit.
   const [lastPrices, setLastPrices] = useState({});
   const [pricesAt, setPricesAt] = useState(null);
-  useEffect(() => {
-    let current = true;
+  const latestPrices = useRef(0);
+  const loadPrices = useCallback(() => {
+    const thisLoad = ++latestPrices.current;
     api
       .prices()
       .then(({ uploadedAt, prices }) => {
-        if (!current) return;
+        if (thisLoad !== latestPrices.current) return; // a newer read is on its way
         setLastPrices(prices ?? {});
         setPricesAt(uploadedAt ?? null);
       })
-      .catch(() => {});
-    return () => {
-      current = false;
-    };
-  }, [trades]);
+      .catch(() => {}); // Keep the prices already shown.
+  }, []);
+  useEffect(loadPrices, [trades, loadPrices]);
+  useRefreshEvery(loadPrices, PRICE_REFRESH_MS);
   const priceStamp = stampTime(pricesAt, today);
 
   function retry() {
@@ -369,7 +371,7 @@ export default function App() {
               {priceStamp && (
                 <span className="section-head__stamp">
                   {' · '}last price{' '}
-                  <time dateTime={pricesAt} title={`Last prices uploaded ${fullTime(pricesAt)}`}>
+                  <time dateTime={pricesAt} title={`Last prices uploaded ${fullTime(pricesAt)}. Checked again every 10 minutes.`}>
                     {priceStamp}
                   </time>
                 </span>

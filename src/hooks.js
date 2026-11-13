@@ -23,6 +23,27 @@ export function useToday() {
   return today;
 }
 
+// Calls `refresh` every `ms` while the page is open. Timers stop while the computer
+// sleeps, so coming back to the tab also refreshes if a call is overdue.
+export function useRefreshEvery(refresh, ms) {
+  useEffect(() => {
+    let last = Date.now();
+    const run = () => {
+      last = Date.now();
+      refresh();
+    };
+    const timer = setInterval(run, ms);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - last >= ms) run();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refresh, ms]);
+}
+
 // A choice remembered in this browser, limited to known values. The first choice is the default.
 export function useStoredChoice(key, choices) {
   const [value, setValue] = useState(() => {

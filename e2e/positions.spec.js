@@ -1,4 +1,4 @@
-import { api, expect, openApp, position, test } from './fixtures.js';
+import { NOON, TODAY, api, expect, openApp, position, test } from './fixtures.js';
 
 test('T13 lots group by ticker and side; buys and shorts stay apart', async ({ page, request }) => {
   await api.post(request, '/trades', {
@@ -72,6 +72,32 @@ test('T15c targets the last price has reached turn green: at or below it for a b
   // The Exit panel marks the same targets.
   await nvda.getByRole('button', { name: /4x target/ }).click();
   await expect(page.getByRole('dialog', { name: 'Sell NVDA' }).locator('.chip--reached')).toHaveCount(2);
+});
+
+test('T15d last prices are read again every 10 minutes, without reloading the page', async ({ page }) => {
+  await page.clock.install({ time: NOON(TODAY) });
+  let upload = { uploadedAt: '2026-11-09T11:50:00.000Z', prices: { NVDA: 190 } };
+  let reads = 0;
+  await page.route('**/api/prices', (route) => {
+    reads += 1;
+    return route.fulfill({ json: upload });
+  });
+  await openApp(page);
+  const last = position(page, 'NVDA').locator('.pos__last');
+  const stamp = page.locator('.section-head__stamp time');
+  await expect(last).toContainText('$190.00');
+  await expect(stamp).toHaveText('today, 11:50 AM');
+
+  // A new upload lands; nothing changes until the 10 minutes are up.
+  upload = { uploadedAt: '2026-11-09T12:00:00.000Z', prices: { NVDA: 192.77 } };
+  const readsBefore = reads;
+  await page.clock.runFor('09:58');
+  expect(reads).toBe(readsBefore);
+  await expect(last).toContainText('$190.00');
+  await page.clock.runFor('00:02');
+  await expect(last).toContainText('$192.77');
+  await expect(stamp).toHaveText('today, 12:00 PM');
+  expect(reads).toBe(readsBefore + 1);
 });
 
 test('T15b an open position’s ticker opens Google Finance in a new tab', async ({ page }) => {
